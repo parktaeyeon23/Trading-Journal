@@ -34,6 +34,8 @@ function doPost(e) {
     if (action === 'saveImage')    return handleSaveImage(e);  // ⭐ v2(FR-4): 차트 이미지 Drive 업로드
     if (action === 'save')         return handleSave(e);   // ⭐ v2: 포지션 배열 저장 (PWA cloudUpload)
     if (action === 'load')         return handleLoad(e);   // ⭐ v2: 포지션 배열 로드 (JSONP fallback)
+    if (action === 'saveCockpit')  return handleSaveCockpit(e); // ⭐ TF Cockpit: Market 보드 동기화 저장
+    if (action === 'loadCockpit')  return handleLoadCockpit(e); // ⭐ TF Cockpit: Market 보드 동기화 로드
 
     // 기본: SMS 처리
     return handleSMS(e);
@@ -48,6 +50,7 @@ function doGet(e) {
   try {
     if (e.parameter.action === 'loadFeedback') return handleLoadFeedback(e);
     if (e.parameter.action === 'load')         return handleLoad(e);       // ⭐ v2: PWA cloudDownload (JSONP)
+    if (e.parameter.action === 'loadCockpit')  return handleLoadCockpit(e); // ⭐ TF Cockpit: Market 보드 로드 (JSONP)
     if (e.parameter.action === 'getIndices')   return handleGetIndices(e);  // ⭐ FR-5: 거래일 지수 (JSONP)
     return out({ ok: true, message: 'GAS reachable', time: new Date().toISOString() });
   } catch (err) {
@@ -221,6 +224,39 @@ function handleLoad(e) {
     }
   }
   const payload = { success: true, data: result, lastSync: new Date().toISOString() };
+  const callback = e.parameter.callback;
+  if (callback) {
+    return ContentService
+      .createTextOutput(`${callback}(${JSON.stringify(payload)})`)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return out(payload);
+}
+
+
+// ===== TF Cockpit — Market 보드 동기화 (단일 JSON blob, ScriptProperties KV) =====
+//  saveCockpit: POST  (action=saveCockpit&cockpit={...})  → 보드 전체 상태 1건 저장
+//  loadCockpit: GET/JSONP (action=loadCockpit&callback=…) → 저장된 보드 + updatedAt
+const COCKPIT_PROP_KEY = 'tfCockpitBoard';
+
+function handleSaveCockpit(e) {
+  const raw = e.parameter.cockpit;
+  if (!raw) return out({ ok: false, success: false, error: 'missing_cockpit' });
+  let obj;
+  try { obj = JSON.parse(raw); } catch (err) { return out({ ok: false, success: false, error: 'bad_json' }); }
+  const updatedAt = new Date().toISOString();
+  PropertiesService.getScriptProperties()
+    .setProperty(COCKPIT_PROP_KEY, JSON.stringify({ data: obj, updatedAt }));
+  return out({ ok: true, success: true, updatedAt });
+}
+
+function handleLoadCockpit(e) {
+  const rawStore = PropertiesService.getScriptProperties().getProperty(COCKPIT_PROP_KEY);
+  let payload = { success: true, data: null, updatedAt: null };
+  if (rawStore) {
+    try { const s = JSON.parse(rawStore); payload = { success: true, data: s.data, updatedAt: s.updatedAt }; }
+    catch (err) { /* keep empty payload */ }
+  }
   const callback = e.parameter.callback;
   if (callback) {
     return ContentService
