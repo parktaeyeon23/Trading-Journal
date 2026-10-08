@@ -56,6 +56,7 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
   - MFE/MAE용 종목 일봉은 GAS `getBars`로 받아 MarketCache(`KR:042700|날짜`)에 저장·동기화 (`src/data/barBackfill.ts`).
   - 진입 근거 태그는 Tag family `reason`, 계획에서 `setReasonTags`로만 바꾼다. 복기 저장은 reason 태그를 건드리지 않는다.
   - 저장된 뷰는 Settings `saved_views`, 월말 대조는 Settings `recon_YYYY-MM`.
+- 목표·손실 한도는 R 단위, 청산 실현분만 센다 (`src/core/goals.ts`, Settings `goal_monthly_r`·`loss_limit_daily_r`·`loss_limit_weekly_r`). 계산은 App에서 한 번 하고 `RiskContext`로 나눠 쓴다. 한도 도달은 경고만 하고 기록을 막지 않는다.
 - R은 항상 원 손절가 기준. 손절 이동 후에도 바뀌지 않는다.
 - 손익·R·MFE/MAE는 저장하지 않고 체결과 시세 캐시에서 계산한다.
 - `/src/core`는 순수 함수, 모든 함수에 Vitest 테스트.

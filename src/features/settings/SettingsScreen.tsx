@@ -5,6 +5,7 @@ import type { ConflictRecord } from '../../data/repo'
 import { formatClock, syncLabel } from '../../ui/syncText'
 import { BackupCard } from './BackupCard'
 import { RulesCard, TagsCard } from './TagsRulesCard'
+import { GoalsCard } from './GoalsCard'
 import { TradingSettingsCard } from './TradingSettingsCard'
 import { WeeklyQuestionsCard } from './WeeklyQuestionsCard'
 
@@ -121,6 +122,7 @@ export function SettingsScreen() {
       </section>
 
       <TradingSettingsCard />
+      <GoalsCard />
       <TagsCard />
       <RulesCard />
       <WeeklyQuestionsCard />

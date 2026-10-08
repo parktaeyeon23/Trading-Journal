@@ -8,6 +8,7 @@ import { readSetting, SETTING_KEYS } from '../../data/settings'
 import { addFill, createUnplannedTrade, type TradeBundle } from '../../data/trades'
 import type { Market, Position } from '../../data/types'
 import { navigate } from '../../ui/routes'
+import { EntryRiskNotice } from '../goals/RiskBanner'
 import { Sheet } from '../../ui/Sheet'
 import { currencyOf, localDateTimeValue } from '../../ui/tradeText'
 import { useRepoQuery } from '../../ui/useRepoQuery'
@@ -179,6 +180,7 @@ export function FillSheet({ trade, side: sideProp, onClose }: Props) {
             </label>
           </div>
         </details>
+        {isEntry && <EntryRiskNotice />}
         {error && (
           <p className="notice notice-bad" role="alert">
             {error}

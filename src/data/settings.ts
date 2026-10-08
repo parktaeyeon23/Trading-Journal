@@ -25,4 +25,7 @@ export const SETTING_KEYS = {
   gradeBands: 'grade_bands',
   feeRate: (market: 'KR' | 'US') => `fee_rate_${market}`,
   sellTaxKR: 'tax_rate_KR',
+  monthlyGoalR: 'goal_monthly_r',
+  dailyLossLimitR: 'loss_limit_daily_r',
+  weeklyLossLimitR: 'loss_limit_weekly_r',
 } as const

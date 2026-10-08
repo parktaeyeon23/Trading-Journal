@@ -2168,3 +2168,82 @@ input[type="checkbox"] {
     bottom: 20px;
   }
 }
+
+/* ---------- Goals & loss limits ---------- */
+.risk-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--warn-border);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+.risk-banner.stop {
+  border-color: var(--alert-text);
+  background: var(--alert-bg);
+  color: var(--alert-text);
+}
+.risk-text {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 14px;
+}
+.risk-text b {
+  font-size: 15px;
+}
+.risk-banner .icon-btn {
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.input-affix {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0 10px;
+}
+.input-affix .input {
+  border: 0;
+  padding: 0 6px;
+  min-width: 0;
+}
+.input-affix .input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.input-affix:focus-within {
+  border-color: var(--brand);
+}
+.affix {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.goal-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.goal-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.goal-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--profit);
+}

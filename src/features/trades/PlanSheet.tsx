@@ -6,6 +6,7 @@ import { readSetting, SETTING_KEYS } from '../../data/settings'
 import { createPlannedTrade, setReasonTags, updatePlan, type TradeBundle } from '../../data/trades'
 import type { Market, Position } from '../../data/types'
 import { navigate } from '../../ui/routes'
+import { EntryRiskNotice } from '../goals/RiskBanner'
 import { Sheet } from '../../ui/Sheet'
 import { currencyOf } from '../../ui/tradeText'
 import { useRepoQuery } from '../../ui/useRepoQuery'
@@ -255,6 +256,7 @@ export function PlanSheet({ trade, onClose }: Props) {
             </div>
           ))}
         </fieldset>
+        {!trade && <EntryRiskNotice />}
         {error && (
           <p className="notice notice-bad" role="alert">
             {error}

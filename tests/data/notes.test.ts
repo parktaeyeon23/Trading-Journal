@@ -59,3 +59,12 @@ describe('saved views', () => {
     expect((await readSavedViews(repo)).map((v) => v.name)).toEqual(['KR 눌림목 A등급'])
   })
 })
+
+describe('goals settings', () => {
+  it('stores limits as positive R and reads unset ones as off', async () => {
+    const { readGoals, writeGoals } = await import('../../src/data/goals')
+    expect(await readGoals(repo)).toEqual({ monthlyR: null, dailyLossR: null, weeklyLossR: null })
+    await writeGoals(repo, { monthlyR: 10, dailyLossR: -3, weeklyLossR: 0 })
+    expect(await readGoals(repo)).toEqual({ monthlyR: 10, dailyLossR: 3, weeklyLossR: null })
+  })
+})

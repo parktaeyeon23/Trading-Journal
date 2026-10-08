@@ -7,6 +7,7 @@ import { Sheet } from '../../ui/Sheet'
 import { useMedia } from '../../ui/useMedia'
 import { useRoute } from '../../ui/useRoute'
 import { full, longDate, md, todayKst, toneClass, UNITS } from './calText'
+import { GoalBar } from '../goals/GoalBar'
 import { DayDetail } from './DayDetail'
 import { EquityChart } from './EquityChart'
 import { MonthGrid } from './MonthGrid'
@@ -242,6 +243,7 @@ export function CalendarScreen() {
         </span>
         <span className="summary-link">분석 ›</span>
       </button>
+      {view === 'month' && <GoalBar from={range.from} to={range.to} label={`${m}월`} />}
       {missingNote && (
         <p className="notice notice-warn" role="status">
           {missingNote}

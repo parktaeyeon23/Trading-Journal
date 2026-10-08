@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EntryRiskNotice } from '../goals/RiskBanner'
 import { formatMoney, formatPct, formatPrice, parseAmount, type Currency } from '../../core/format'
 import { PYRAMID_PRESETS, splitStages } from '../../core/pyramid'
 import { openRiskPct, type Bar } from '../../core/risk'
@@ -402,6 +403,7 @@ export function CalculatorScreen() {
                   {openRisk.withoutStop > 0 && <p className="help">손절가가 없는 보유 포지션 {openRisk.withoutStop}개는 오픈 리스크에 포함되지 않았습니다.</p>}
                   {chosen.qty === 0 && <p className="warn">1주 리스크가 RPT 예산보다 큽니다. 손절을 좁히거나 RPT를 높이세요.</p>}
 
+                  <EntryRiskNotice />
                   <button type="button" className="btn btn-primary btn-block" onClick={() => void sendToTrade()} disabled={chosen.qty <= 0}>
                     트레이드로 보내기
                   </button>

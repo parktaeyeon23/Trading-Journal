@@ -1,4 +1,9 @@
-import { lazy, Suspense, useEffect, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react'
+import { tradeEvents } from './core/calendar'
+import { riskState } from './core/goals'
+import { readGoals } from './data/goals'
+import { RiskBanner } from './features/goals/RiskBanner'
+import { RiskContext, type RiskInfo } from './features/goals/risk'
 import { useData } from './data/dataStore'
 import { loadAllTrades } from './data/trades'
 import { todayKst } from './features/calendar/calText'
@@ -40,13 +45,28 @@ export default function App() {
   const init = useData((s) => s.init)
   const ready = useData((s) => s.ready)
   const counts = useRepoQuery(async (r) => {
-    const trades = await loadAllTrades(r)
+    const [trades, goals] = await Promise.all([loadAllTrades(r), readGoals(r)])
     const today = todayKst()
     return {
       reviewPending: trades.filter((t) => t.position.status === 'review_pending').length,
       postDue: trades.filter((t) => postChartDays(t, today) !== null).length,
+      goals,
+      events: trades.flatMap((t) =>
+        tradeEvents({ id: t.position.id, market: t.position.market, direction: t.position.direction, fills: t.fills, oneR: t.summary.oneR }, 'exit'),
+      ),
     }
   }, [])
+
+  // "Today" moves on by itself (midnight, a new US session), so re-check every minute.
+  const [now, setNow] = useState(() => new Date().toISOString())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date().toISOString()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const risk = useMemo<RiskInfo | null>(
+    () => (counts ? { goals: counts.goals, events: counts.events, state: riskState(counts.events, counts.goals, now) } : null),
+    [counts, now],
+  )
 
   useEffect(() => {
     void init()
@@ -66,15 +86,18 @@ export default function App() {
 
   const Screen = SCREENS[route.id]
   return (
-    <Shell current={route.id} reviewPending={counts?.reviewPending ?? 0} postDue={counts?.postDue ?? 0}>
-      {ready ? (
-        <Suspense fallback={<p className="empty">불러오는 중…</p>}>
-          <Screen />
-        </Suspense>
-      ) : (
-        <p className="empty">불러오는 중…</p>
-      )}
-      <UpdateBanner />
-    </Shell>
+    <RiskContext.Provider value={risk}>
+      <Shell current={route.id} reviewPending={counts?.reviewPending ?? 0} postDue={counts?.postDue ?? 0}>
+        <RiskBanner />
+        {ready ? (
+          <Suspense fallback={<p className="empty">불러오는 중…</p>}>
+            <Screen />
+          </Suspense>
+        ) : (
+          <p className="empty">불러오는 중…</p>
+        )}
+        <UpdateBanner />
+      </Shell>
+    </RiskContext.Provider>
   )
 }
