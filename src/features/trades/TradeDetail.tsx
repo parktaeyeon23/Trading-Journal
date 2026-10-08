@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatMoney, formatPct, formatPrice } from '../../core/format'
 import { entrySide } from '../../core/pnl'
 import { useData } from '../../data/dataStore'
+import { Chartbook } from '../chartbook/Chartbook'
 import { loadTrade, removeFill } from '../../data/trades'
 import { hrefFor } from '../../ui/routes'
 import { GradeBadge, PnlText } from '../../ui/TradeBits'
@@ -204,19 +205,7 @@ export function TradeDetail({ id }: { id: string }) {
         </div>
 
         <div className="stack">
-          <section className="card stack" aria-labelledby="chart-title">
-            <h2 id="chart-title" className="section-title">
-              차트북
-            </h2>
-            <div className="slot-grid">
-              {['① 셋업', '② 진입', '③ 청산 (필수)', '④ 사후 복기'].map((s) => (
-                <div key={s} className="slot">
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-            <p className="help">차트 업로드는 다음 단계(Step 6)에서 켜집니다.</p>
-          </section>
+          <Chartbook trade={trade} />
 
           <section className="card stack" aria-labelledby="review-title">
             <h2 id="review-title" className="section-title">

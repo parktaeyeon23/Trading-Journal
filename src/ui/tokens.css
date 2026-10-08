@@ -31,6 +31,11 @@
   --alert-bg: #fdecec;
   --alert-text: #b42318;
 
+  /* Fullscreen chart viewer: always dark so charts read the same in any theme. */
+  --viewer-bg: #0b0f0d;
+  --viewer-text: #f2f5f4;
+  --viewer-control: rgba(255, 255, 255, 0.14);
+
   --font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 

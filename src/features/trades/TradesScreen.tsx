@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatPrice } from '../../core/format'
 import { loadAllTrades, type TradeBundle } from '../../data/trades'
+import { Gallery } from '../chartbook/Gallery'
 import type { PositionStatus } from '../../data/types'
 import { GradeBadge, PnlText } from '../../ui/TradeBits'
 import { hrefFor } from '../../ui/routes'
@@ -18,6 +19,16 @@ const SECTIONS: { status: PositionStatus; title: string; empty?: string }[] = [
   { status: 'done', title: '완료' },
 ]
 const DONE_PAGE = 20
+const VIEW_KEY = 'aj.trades.view'
+
+type View = 'list' | 'gallery'
+function savedView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'gallery' ? 'gallery' : 'list'
+  } catch {
+    return 'list'
+  }
+}
 
 export function TradesScreen() {
   const route = useRoute()
@@ -29,6 +40,15 @@ function TradeList() {
   const trades = useRepoQuery((r) => loadAllTrades(r), [])
   const [sheet, setSheet] = useState<null | 'plan' | 'fill'>(null)
   const [doneShown, setDoneShown] = useState(DONE_PAGE)
+  const [view, setViewState] = useState<View>(savedView)
+  const setView = (v: View) => {
+    setViewState(v)
+    try {
+      localStorage.setItem(VIEW_KEY, v)
+    } catch {
+      /* private mode: the choice just isn't remembered */
+    }
+  }
 
   const byStatus = (s: PositionStatus) =>
     (trades ?? [])
@@ -39,6 +59,14 @@ function TradeList() {
     <>
       <div className="row wrap">
         <h1 className="page-title">트레이드</h1>
+        <div className="seg seg-small" role="group" aria-label="보기">
+          <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
+            목록
+          </button>
+          <button type="button" aria-pressed={view === 'gallery'} onClick={() => setView('gallery')}>
+            갤러리
+          </button>
+        </div>
         <div className="row wrap push-right">
           <button type="button" className="btn btn-secondary" onClick={() => setSheet('fill')}>
             체결부터 입력
@@ -57,6 +85,8 @@ function TradeList() {
             아직 트레이드가 없습니다. 계산기에서 "트레이드로 보내기"를 누르거나, 위의 "+ 새 계획"으로 시작하세요.
           </p>
         </section>
+      ) : view === 'gallery' ? (
+        <Gallery trades={trades} />
       ) : (
         SECTIONS.map(({ status, title }) => {
           const list = byStatus(status)

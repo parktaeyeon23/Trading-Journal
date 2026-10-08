@@ -48,6 +48,7 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
   - 손익 평균단가는 이동평균법 (`src/core/pnl.ts`). 시세 출처는 Yahoo, `gas/Quote.js`의 `fetchDailyBars_` 하나에만 의존.
   - 모든 쓰기는 IndexedDB + outbox에 같은 트랜잭션으로 들어가고, 삭제는 `deleted=true` 소프트 삭제.
   - 엔티티·필드 이름은 `gas/Config.js`와 `src/data/types.ts`가 같아야 한다 (서버는 모르는 필드를 거부). 필드 추가는 둘 다 고친다.
+- 차트 이미지는 `src/data/uploads.ts`의 `UploadQueue`로만 올린다 (기기에 먼저 저장 → 업로드 성공 시 ChartImages 행). TradingView 링크·삭제는 `src/data/charts.ts`·`repo.remove`. 복기 저장에는 ③ 청산 차트(대기 중 포함)가 필요하다.
 - R은 항상 원 손절가 기준. 손절 이동 후에도 바뀌지 않는다.
 - 손익·R·MFE/MAE는 저장하지 않고 체결과 시세 캐시에서 계산한다.
 - `/src/core`는 순수 함수, 모든 함수에 Vitest 테스트.

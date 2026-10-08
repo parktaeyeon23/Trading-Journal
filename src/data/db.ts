@@ -2,12 +2,14 @@ import { openDB, type IDBPDatabase } from 'idb'
 import { ENTITY_ORDER, POSITION_CHILDREN } from './types'
 
 export const DB_NAME = 'alpha-journal'
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 /** Non-entity stores. */
 export const OUTBOX = 'outbox'
 export const CONFLICTS = 'conflicts'
 export const META = 'meta'
+/** v2: chart images waiting to be uploaded (kept while offline). */
+export const UPLOADS = 'uploads'
 
 export type AppDb = IDBPDatabase
 
@@ -30,6 +32,9 @@ export function openAppDb(name = DB_NAME): Promise<AppDb> {
         db.createObjectStore(OUTBOX, { keyPath: 'seq', autoIncrement: true }).createIndex('entity_id', ['entity', 'id'])
         db.createObjectStore(CONFLICTS, { keyPath: 'seq', autoIncrement: true })
         db.createObjectStore(META)
+      }
+      if (oldVersion < 2) {
+        db.createObjectStore(UPLOADS, { keyPath: 'id' }).createIndex('position_id', 'position_id')
       }
     },
   })

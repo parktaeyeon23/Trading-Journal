@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { gradeExecution, type GradeBands } from '../../core/grade'
 import { autoChecks, BUILTIN_CHECK_LABELS, BUILTIN_CHECKS } from '../../core/trade'
+import { exitChartCount } from '../../data/charts'
 import { useData } from '../../data/dataStore'
 import { readSetting, SETTING_KEYS } from '../../data/settings'
 import { rulesForSetup, saveReview, type TradeBundle } from '../../data/trades'
@@ -8,8 +9,6 @@ import type { Tag } from '../../data/types'
 import { GradeBadge } from '../../ui/TradeBits'
 import { useRepoQuery } from '../../ui/useRepoQuery'
 
-/** Step 6 turns this on: a review needs at least one exit-slot chart. */
-export const REQUIRE_EXIT_CHART = false
 
 type Phase = 'entry' | 'hold' | 'exit'
 const PHASES: { v: Phase; label: string }[] = [
@@ -20,6 +19,8 @@ const PHASES: { v: Phase; label: string }[] = [
 
 export function ReviewForm({ trade }: { trade: TradeBundle }) {
   const repo = useData((s) => s.repo)
+  const uploads = useData((s) => s.uploads)
+  const pending = useRepoQuery(async () => (uploads ? uploads.list(trade.position.id) : []), [uploads, trade.position.id])
   const data = useRepoQuery(
     async (r) => ({
       rules: rulesForSetup(await r.list('Rules'), trade.position.setup),
@@ -54,12 +55,15 @@ export function ReviewForm({ trade }: { trade: TradeBundle }) {
   ]
   const answered = Object.fromEntries(items.filter((i) => i.id in checks).map((i) => [i.id, checks[i.id]]))
   const allAnswered = items.every((i) => i.id in checks)
+  // A review needs at least one exit-slot chart (uploaded, linked or waiting to upload).
+  const exitMissing = exitChartCount(trade.charts, pending ?? []) === 0
+  const canSave = allAnswered && !exitMissing
   const result = gradeExecution(answered, !!trade.position.no_plan, data.bands)
   const mistakeTags = data.tags.filter((t) => t.family === 'mistake')
   const emotionTags = data.tags.filter((t) => t.family === 'emotion')
 
   async function save() {
-    if (!repo || !allAnswered) return
+    if (!repo || !canSave) return
     await saveReview(repo, trade.position.id, {
       checklist: answered,
       grade: result.grade,
@@ -153,10 +157,15 @@ export function ReviewForm({ trade }: { trade: TradeBundle }) {
           <input type="checkbox" checked={promote} onChange={(e) => setPromote(e.target.checked)} disabled={!nextRule.trim()} />
           "하지 말아야 할 것"으로 승격
         </label>
-        <button type="button" className="btn btn-primary push-right" onClick={() => void save()} disabled={!allAnswered}>
+        <button type="button" className="btn btn-primary push-right" onClick={() => void save()} disabled={!canSave}>
           복기 저장
         </button>
       </div>
+      {exitMissing && (
+        <p className="help" style={{ margin: 0, textAlign: 'right' }}>
+          차트북에 ③ 청산 차트를 올리면 저장할 수 있습니다.
+        </p>
+      )}
       {savedAt && (
         <p className="notice notice-good" role="status">
           {savedAt} 저장됨

@@ -6,7 +6,7 @@ import { pyramidState } from '../core/pyramid'
 import { compareFills, entrySide, positionPnl } from '../core/pnl'
 import { deriveStatus, summarizeTrade, type TradeSummary } from '../core/trade'
 import type { LocalRepo, RowInput } from './repo'
-import type { Fill, Market, Plan, Position, PositionTag, Review, Rule, StopChange, Tag } from './types'
+import type { ChartImage, Fill, Market, Plan, Position, PositionTag, Review, Rule, StopChange, Tag } from './types'
 
 // ---------- defaults ----------
 
@@ -63,6 +63,8 @@ export interface TradeBundle {
   stops: StopChange[]
   review: Review | null
   tags: PositionTag[]
+  /** Uploaded/linked chart images, by slot order then sort. */
+  charts: ChartImage[]
   summary: TradeSummary
   /** Latest stop: the last move, else the original stop. */
   currentStop: number | null
@@ -71,12 +73,13 @@ export interface TradeBundle {
 export async function loadTrade(repo: LocalRepo, positionId: string): Promise<TradeBundle | null> {
   const position = await repo.get('Positions', positionId)
   if (!position || position.deleted) return null
-  const [plans, fills, stops, reviews, tags] = await Promise.all([
+  const [plans, fills, stops, reviews, tags, charts] = await Promise.all([
     repo.listByPosition('Plans', positionId),
     repo.listByPosition('Fills', positionId),
     repo.listByPosition('StopHistory', positionId),
     repo.listByPosition('Reviews', positionId),
     repo.listByPosition('PositionTags', positionId),
+    repo.listByPosition('ChartImages', positionId),
   ])
   const plan = latest(plans)
   const sortedFills = [...fills].sort(compareFills)
@@ -88,6 +91,7 @@ export async function loadTrade(repo: LocalRepo, positionId: string): Promise<Tr
     stops: sortedStops,
     review: latest(reviews),
     tags,
+    charts: [...charts].sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] || (a.sort ?? 0) - (b.sort ?? 0) || (a.created_at < b.created_at ? -1 : 1)),
     summary: summarizeTrade({ direction: position.direction, originalStop: position.original_stop, plan, fills: sortedFills }),
     currentStop: sortedStops.length ? sortedStops[sortedStops.length - 1].new_stop : (position.original_stop ?? null),
   }
@@ -102,6 +106,8 @@ export async function loadAllTrades(repo: LocalRepo): Promise<TradeBundle[]> {
   }
   return out
 }
+
+export const SLOT_ORDER: Record<ChartImage['slot'], number> = { setup: 0, entry: 1, exit: 2, post: 3, free: 4 }
 
 function latest<T extends { updated_at: string }>(rows: T[]): T | null {
   return rows.length ? [...rows].sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))[0] : null

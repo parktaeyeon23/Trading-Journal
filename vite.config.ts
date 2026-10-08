@@ -13,6 +13,25 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['icon.svg'],
+      workbox: {
+        // Chart pictures never change once uploaded (a replacement gets a new file id),
+        // so keep them for offline viewing. Cross-origin <img> loads are opaque (status 0),
+        // and browsers charge opaque entries heavily against quota — hence the modest cap.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              (url.hostname === 'drive.google.com' && url.pathname === '/thumbnail') ||
+              url.hostname.endsWith('.googleusercontent.com') ||
+              url.hostname === 's3.tradingview.com',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'chart-images',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 150, maxAgeSeconds: 60 * 60 * 24 * 90 },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'ALPHA JOURNAL',
         short_name: 'ALPHA',

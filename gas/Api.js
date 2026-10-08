@@ -1,7 +1,7 @@
 /**
  * Web app entry. Every request is a POST with a JSON body (sent as text/plain
  * by the app to avoid a CORS preflight):
- *   { "secret": "...", "action": "ping|pullAll|upsert|softDelete|batch|getSettings|getQuote", ...params }
+ *   { "secret": "...", "action": "ping|pullAll|upsert|softDelete|batch|getSettings|getQuote|uploadImage", ...params }
  * Every response is JSON: { ok: true, ... } or { ok: false, error: { code, message } }.
  * Apps Script web apps cannot set HTTP status codes, so callers check `ok`.
  */
@@ -42,6 +42,8 @@ function handleRequest(req) {
         return getSettings_()
       case 'getQuote':
         return getQuote_(req.symbol, req.market)
+      case 'uploadImage':
+        return uploadImage_(req)
       case 'upsert':
         return withLock_(function () {
           return { ok: true, serverTime: nowIso_(), results: [runOp_({ op: 'upsert', entity: req.entity, rows: req.rows })] }
@@ -147,6 +149,7 @@ function upsert_(entity, rows) {
     row.synced_at = stamp
   })
   applyPlan_(table, plan)
+  if (entity === 'ChartImages') trashDeletedCharts_(existing, plan.updates)
   return {
     op: 'upsert',
     entity: entity,
@@ -169,7 +172,12 @@ function softDelete_(entity, ids) {
     if (String(id) in table.index) updates.push({ id: String(id), deleted: true, updated_at: now, synced_at: now })
     else notFound.push(String(id))
   })
+  var before = {}
+  updates.forEach(function (u) {
+    before[u.id] = rowAt_(table, u.id)
+  })
   applyPlan_(table, { inserts: [], updates: updates, unchanged: [], conflicts: [] })
+  if (entity === 'ChartImages') trashDeletedCharts_(before, updates)
   return { op: 'softDelete', entity: entity, deleted: updates.length, notFound: notFound, updated_at: now }
 }
 

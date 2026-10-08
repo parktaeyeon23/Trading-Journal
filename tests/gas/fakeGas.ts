@@ -112,6 +112,11 @@ export interface FakeFile {
   name: string
   created: Date
   trashed: boolean
+  mime?: string
+  size?: number
+  /** Folder path like "ALPHA JOURNAL/charts/2026/10". */
+  path?: string
+  sharing?: string
 }
 
 export interface FakeGas {
@@ -128,7 +133,7 @@ export interface FakeGas {
   call<T = any>(fn: string, ...args: unknown[]): T
 }
 
-const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Backup.js', 'Quote.js', 'Tests.js']
+const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Backup.js', 'Quote.js', 'Charts.js', 'Tests.js']
 
 export interface FakeHttp {
   /** url → [status, body]; unmatched urls return 404. */
@@ -148,11 +153,15 @@ export function loadGas(): FakeGas {
     getId: () => f.id,
     getName: () => f.name,
     getDateCreated: () => f.created,
+    getMimeType: () => f.mime,
     setTrashed: (v: boolean) => {
       f.trashed = v
     },
+    setSharing: (access: string, perm: string) => {
+      f.sharing = `${access}:${perm}`
+    },
   })
-  const folder = () => {
+  const folder = (path = '') => {
     const children = new Map<string, unknown>()
     const own: FakeFile[] = []
     const f: any = {
@@ -162,9 +171,15 @@ export function loadGas(): FakeGas {
         return { hasNext: () => !!hit, next: () => hit }
       },
       createFolder: (name: string) => {
-        const c = folder()
+        const c = folder(path ? `${path}/${name}` : name)
         children.set(name, c)
         return c
+      },
+      createFile: (blob: { bytes: Uint8Array; mime: string; name: string }) => {
+        const file: FakeFile = { id: randomUUID(), name: blob.name, created: now(), trashed: false, mime: blob.mime, size: blob.bytes.length, path }
+        files.push(file)
+        own.push(file)
+        return asDriveFile(file)
       },
       getFiles: () => {
         const list = own.filter((x) => !x.trashed)
@@ -175,6 +190,17 @@ export function loadGas(): FakeGas {
     return f
   }
   const root = folder()
+  /** Stand-in for the spreadsheet's own Drive file (moveTo / makeCopy for backups). */
+  const genericFile = () => ({
+    moveTo: () => {},
+    setTrashed: () => {},
+    makeCopy: (name: string, into: any) => {
+      const file: FakeFile = { id: randomUUID(), name, created: now(), trashed: false }
+      files.push(file)
+      into?.own?.push(file)
+      return asDriveFile(file)
+    },
+  })
 
   const services = {
     SpreadsheetApp: {
@@ -203,20 +229,23 @@ export function loadGas(): FakeGas {
     },
     Utilities: {
       getUuid: () => randomUUID(),
-      formatDate: (d: Date) => d.toISOString(),
+      // Supports the patterns the code uses (yyyy MM dd HH mm) in Asia/Seoul.
+      formatDate: (d: Date, _tz: string, pattern: string) => {
+        const k = new Date(d.getTime() + 9 * 3600 * 1000).toISOString()
+        return pattern.replace('yyyy', k.slice(0, 4)).replace('MM', k.slice(5, 7)).replace('dd', k.slice(8, 10)).replace('HH', k.slice(11, 13)).replace('mm', k.slice(14, 16))
+      },
+      base64Decode: (b64: string) => Uint8Array.from(Buffer.from(b64, 'base64')),
+      newBlob: (bytes: Uint8Array, mime: string, name: string) => ({ bytes, mime, name }),
     },
     DriveApp: {
+      Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK' },
+      Permission: { VIEW: 'VIEW' },
       getRootFolder: () => root,
-      getFileById: (_id: string) => ({
-        moveTo: () => {},
-        setTrashed: () => {},
-        makeCopy: (name: string, into: any) => {
-          const file: FakeFile = { id: randomUUID(), name, created: now(), trashed: false }
-          files.push(file)
-          into?.own?.push(file)
-          return asDriveFile(file)
-        },
-      }),
+      getFileById: (id: string) => {
+        const real = files.find((f) => f.id === id)
+        if (real) return asDriveFile(real)
+        return genericFile()
+      },
     },
     ScriptApp: {
       getProjectTriggers: () =>

@@ -5,6 +5,7 @@ import { GasAdapter, type GasConfig } from './gasAdapter'
 import { LocalRepo } from './repo'
 import { SyncEngine, type SyncStatus } from './sync'
 import { ensureDefaults } from './trades'
+import { UploadQueue } from './uploads'
 
 const META_BACKEND = 'backend'
 
@@ -12,6 +13,7 @@ interface DataState {
   ready: boolean
   repo: LocalRepo | null
   engine: SyncEngine | null
+  uploads: UploadQueue | null
   config: GasConfig | null
   status: SyncStatus
   /** Bumped on every local or pulled change, so screens can re-read. */
@@ -32,6 +34,7 @@ export const useData = create<DataState>((set, get) => ({
   ready: false,
   repo: null,
   engine: null,
+  uploads: null,
   config: null,
   status: { state: 'unconfigured', pending: 0, lastSyncAt: null, lastError: null, lastErrorCode: null, conflicts: 0 },
   version: 0,
@@ -45,8 +48,14 @@ export const useData = create<DataState>((set, get) => ({
       await ensureDefaults(repo)
       const config = (await repo.getMeta<GasConfig>(META_BACKEND)) ?? null
       engine.setAdapter(makeAdapter(config))
-      set({ repo, engine, config, ready: true })
+      const uploads = new UploadQueue(repo, () => makeAdapter(get().config))
+      uploads.onChange(() => set((s) => ({ version: s.version + 1 })))
+      window.addEventListener('online', () => void uploads.run())
+      // Images waiting from an earlier session go out as soon as possible.
+      setInterval(() => void uploads.run(), 60_000)
+      set({ repo, engine, uploads, config, ready: true })
       engine.start()
+      void uploads.run()
     })()
     return initPromise
   },
@@ -58,7 +67,10 @@ export const useData = create<DataState>((set, get) => ({
     await repo.setMeta(META_BACKEND, clean)
     set({ config: clean })
     engine.setAdapter(makeAdapter(clean))
-    if (clean) void engine.syncNow()
+    if (clean) {
+      void engine.syncNow()
+      void get().uploads?.run()
+    }
   },
 
   getQuote: async (symbol, market) => {

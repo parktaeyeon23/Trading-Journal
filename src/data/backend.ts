@@ -50,6 +50,20 @@ export interface QuoteResult {
   bars: QuoteBar[]
 }
 
+export interface UploadImageRequest {
+  id: string
+  position_id: string
+  slot: 'setup' | 'entry' | 'exit' | 'post' | 'free'
+  sort: number | null
+  mime: string
+  /** base64 image data */
+  data: string
+  /** base64 thumbnail, optional */
+  thumb: string | null
+  created_at: string
+  updated_at: string
+}
+
 /**
  * Everything the app needs from a backend. The app depends on this interface
  * only, so moving off Apps Script later means writing one new adapter.
@@ -62,6 +76,8 @@ export interface BackendAdapter {
   getSettings(): Promise<Record<string, unknown>>
   /** Live daily quote; also caches the bars server-side (they arrive in MarketCache by sync). */
   getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult>
+  /** Stores a chart image (idempotent by id) and returns the saved ChartImages row. */
+  uploadImage(req: UploadImageRequest): Promise<BaseRow>
 }
 
 export type BackendErrorCode =
@@ -76,6 +92,7 @@ export type BackendErrorCode =
   | 'busy'
   | 'quote_not_found'
   | 'quote_failed'
+  | 'too_large'
   | 'internal'
 
 export class BackendError extends Error {

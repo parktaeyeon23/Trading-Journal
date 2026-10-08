@@ -1,4 +1,14 @@
-import { BackendError, type BackendAdapter, type BackendErrorCode, type PullResult, type QuoteResult, type UpsertOp, type UpsertResult } from './backend'
+import {
+  BackendError,
+  type BackendAdapter,
+  type BackendErrorCode,
+  type PullResult,
+  type QuoteResult,
+  type UploadImageRequest,
+  type UpsertOp,
+  type UpsertResult,
+} from './backend'
+import type { BaseRow } from './types'
 
 export interface GasConfig {
   /** Web app URL ending in /exec. */
@@ -47,6 +57,7 @@ const KNOWN_CODES: BackendErrorCode[] = [
   'busy',
   'quote_not_found',
   'quote_failed',
+  'too_large',
   'internal',
 ]
 
@@ -90,6 +101,11 @@ export class GasAdapter implements BackendAdapter {
   async getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult> {
     const r = await this.call<QuoteResult>('getQuote', { symbol, market })
     return { symbol: r.symbol, cacheSymbol: r.cacheSymbol, name: r.name, currency: r.currency, price: r.price, asOf: r.asOf, bars: r.bars }
+  }
+
+  async uploadImage(req: UploadImageRequest): Promise<BaseRow> {
+    const r = await this.call<{ row: BaseRow }>('uploadImage', { ...req })
+    return r.row
   }
 
   async getSettings() {
