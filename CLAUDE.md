@@ -23,8 +23,8 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
   /data      백엔드 어댑터 인터페이스, GAS 어댑터, IndexedDB 캐시, 동기화
   /features  calendar, trades, chartbook, calculator, analysis, notes
   /ui        공통 컴포넌트, 테마 토큰(tokens.css), 앱 셸, 라우팅
-/gas         Apps Script 소스 (.gs), appsscript.json
-/tests       core 단위 테스트 (/tests/core/*.test.ts)
+/gas         Apps Script 소스 (.js, clasp가 .gs로 올림), appsscript.json. 배포·API는 gas/README.md
+/tests       core 단위 테스트 (/tests/core), GAS를 가짜 서비스로 돌리는 테스트 (/tests/gas)
 ```
 
 ## 도메인 용어
