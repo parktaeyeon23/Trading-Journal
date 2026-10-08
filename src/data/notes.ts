@@ -25,18 +25,39 @@ export async function saveDailyNote(repo: LocalRepo, date: string, patch: { prem
 export interface WeeklyAnswer {
   q: string
   a: string
+  /** 'memo' marks the free "한 주 정리" note stored alongside the answers (no extra sheet column). */
+  kind?: 'memo'
 }
+
+export const MEMO_LABEL = '한 주 정리'
+
+export interface ParsedWeeklyReview {
+  /** Question answers, without the memo. */
+  answers: WeeklyAnswer[]
+  memo: string
+}
+
+/** Splits a stored answers array into question answers and the week memo. */
+export function parseWeeklyAnswers(raw: unknown): ParsedWeeklyReview {
+  const list = Array.isArray(raw) ? (raw as WeeklyAnswer[]).filter((x) => x && typeof x.q === 'string') : []
+  const memo = list.find((x) => x.kind === 'memo')
+  return { answers: list.filter((x) => x.kind !== 'memo').map((x) => ({ q: x.q, a: x.a ?? '' })), memo: memo?.a ?? '' }
+}
+
+/** True when anything was written: an answer or the memo. */
+export const isWritten = (p: ParsedWeeklyReview) => !!p.memo.trim() || p.answers.some((a) => a.a.trim())
 
 /** Answers keep their question text, so editing the template later never re-labels old answers. */
-export async function readWeeklyReview(repo: LocalRepo, weekStart: string): Promise<{ row: WeeklyReview | null; answers: WeeklyAnswer[] }> {
+export async function readWeeklyReview(repo: LocalRepo, weekStart: string): Promise<{ row: WeeklyReview | null } & ParsedWeeklyReview> {
   const row = await repo.get('WeeklyReviews', weeklyReviewId(weekStart))
-  if (!row || row.deleted) return { row: null, answers: [] }
-  const answers = Array.isArray(row.answers) ? (row.answers as unknown as WeeklyAnswer[]).filter((x) => x && typeof x.q === 'string') : []
-  return { row, answers }
+  if (!row || row.deleted) return { row: null, answers: [], memo: '' }
+  return { row, ...parseWeeklyAnswers(row.answers) }
 }
 
-export async function saveWeeklyReview(repo: LocalRepo, weekStart: string, answers: WeeklyAnswer[]): Promise<WeeklyReview> {
-  return repo.put('WeeklyReviews', { id: weeklyReviewId(weekStart), week_start: weekStart, answers: answers as unknown as WeeklyReview['answers'] })
+export async function saveWeeklyReview(repo: LocalRepo, weekStart: string, answers: WeeklyAnswer[], memo = ''): Promise<WeeklyReview> {
+  const stored: WeeklyAnswer[] = answers.map((x) => ({ q: x.q, a: x.a }))
+  if (memo.trim()) stored.push({ q: MEMO_LABEL, a: memo, kind: 'memo' })
+  return repo.put('WeeklyReviews', { id: weeklyReviewId(weekStart), week_start: weekStart, answers: stored as unknown as WeeklyReview['answers'] })
 }
 
 /**

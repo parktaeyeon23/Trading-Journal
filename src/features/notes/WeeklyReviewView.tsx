@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { addDays } from '../../core/calendar'
 import { formatMoney, formatR } from '../../core/format'
 import { useData } from '../../data/dataStore'
-import { mergeQuestions, readWeeklyQuestions, readWeeklyReview, saveWeeklyReview, type WeeklyAnswer } from '../../data/notes'
+import { MEMO_LABEL, mergeQuestions, readWeeklyQuestions, readWeeklyReview, saveWeeklyReview, type WeeklyAnswer } from '../../data/notes'
 import { hrefFor } from '../../ui/routes'
 import { PnlText } from '../../ui/TradeBits'
 import { useRepoQuery } from '../../ui/useRepoQuery'
@@ -14,7 +14,7 @@ export function WeeklyReviewView({ weekStart }: { weekStart: string }) {
     async (r) => {
       const [base, review, template] = await Promise.all([loadWeekBase(r), readWeeklyReview(r, weekStart), readWeeklyQuestions(r)])
       const nums = weekNumbers(base, weekStart)
-      return { weekStart, nums, answers: mergeQuestions(template, review.answers), saved: !!review.row }
+      return { weekStart, nums, answers: mergeQuestions(template, review.answers), memo: review.memo, saved: !!review.row }
     },
     [weekStart],
   )
@@ -38,7 +38,7 @@ export function WeeklyReviewView({ weekStart }: { weekStart: string }) {
       {data && data.weekStart === weekStart ? (
         <>
           <Numbers n={data.nums} />
-          <Answers key={weekStart} weekStart={weekStart} initial={data.answers} />
+          <Answers key={weekStart} weekStart={weekStart} initial={data.answers} initialMemo={data.memo} />
         </>
       ) : (
         <p className="empty">불러오는 중…</p>
@@ -121,17 +121,19 @@ function Numbers({ n }: { n: WeekNumbers }) {
   )
 }
 
-function Answers({ weekStart, initial }: { weekStart: string; initial: WeeklyAnswer[] }) {
+function Answers({ weekStart, initial, initialMemo }: { weekStart: string; initial: WeeklyAnswer[]; initialMemo: string }) {
   const repo = useData((s) => s.repo)
   const [answers, setAnswers] = useState(initial)
-  const [saved, setSaved] = useState(JSON.stringify(initial))
+  const [memo, setMemo] = useState(initialMemo)
+  const snapshot = JSON.stringify({ answers, memo })
+  const [saved, setSaved] = useState(JSON.stringify({ answers: initial, memo: initialMemo }))
   const [savedAt, setSavedAt] = useState<string | null>(null)
-  const dirty = JSON.stringify(answers) !== saved
+  const dirty = snapshot !== saved
 
   async function save() {
     if (!repo || !dirty) return
-    await saveWeeklyReview(repo, weekStart, answers)
-    setSaved(JSON.stringify(answers))
+    await saveWeeklyReview(repo, weekStart, answers, memo)
+    setSaved(snapshot)
     setSavedAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }))
   }
 
@@ -149,6 +151,17 @@ function Answers({ weekStart, initial }: { weekStart: string; initial: WeeklyAns
           />
         </label>
       ))}
+      <label className="field">
+        <span className="field-label">{MEMO_LABEL}</span>
+        <textarea
+          className="input textarea"
+          rows={6}
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          onBlur={() => void save()}
+          placeholder="이번 주 시장 흐름, 잘된 것·안 된 것, 다음 주에 가져갈 것을 자유롭게"
+        />
+      </label>
       <div className="row">
         {savedAt && !dirty && (
           <span className="help" role="status" style={{ margin: 0 }}>

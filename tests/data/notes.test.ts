@@ -38,6 +38,20 @@ describe('notes', () => {
     ])
   })
 
+  it('keeps the week memo apart from the answers', async () => {
+    const { isWritten } = await import('../../src/data/notes')
+    await saveWeeklyReview(repo, '2026-10-05', [{ q: '질문', a: '' }], '반도체 비중 과했다\n다음 주는 KR 위주')
+    const r = await readWeeklyReview(repo, '2026-10-05')
+    expect(r.answers).toEqual([{ q: '질문', a: '' }])
+    expect(r.memo).toBe('반도체 비중 과했다\n다음 주는 KR 위주')
+    expect(isWritten(r)).toBe(true)
+    // The memo never shows up as a question.
+    expect(mergeQuestions(['질문'], r.answers).map((x) => x.q)).toEqual(['질문'])
+    await saveWeeklyReview(repo, '2026-10-05', r.answers, '  ')
+    const cleared = await readWeeklyReview(repo, '2026-10-05')
+    expect([cleared.memo, isWritten(cleared)]).toEqual(['', false])
+  })
+
   it('edits the weekly template in settings, falling back to the default', async () => {
     expect(await readWeeklyQuestions(repo)).toEqual(DEFAULT_WEEKLY_QUESTIONS)
     await writeWeeklyQuestions(repo, [' 질문 A ', '', '질문 B'])

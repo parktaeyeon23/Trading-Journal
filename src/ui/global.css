@@ -289,7 +289,16 @@ textarea {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.btn-primary {
+/* Links styled as buttons: center like buttons, no underline, and keep the
+   button's text colour on hover (the plain a:hover rule is more specific). */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.btn-primary,
+a.btn-primary:hover {
   background: var(--brand);
   color: var(--on-brand);
 }
@@ -2246,4 +2255,58 @@ input[type="checkbox"] {
   height: 100%;
   border-radius: 4px;
   background: var(--profit);
+}
+
+/* Notes list views */
+button.note-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.week-group {
+  border-bottom: 1px solid var(--divider);
+}
+.week-group:last-of-type {
+  border-bottom: 0;
+}
+.week-group .week-head {
+  border-bottom: 0;
+}
+.caret {
+  width: 14px;
+  color: var(--text-secondary);
+}
+.week-memo {
+  margin: 0 0 8px 24px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+p.week-memo.faint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.week-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 12px 24px;
+}
+.week-body .note-row:last-of-type {
+  border-bottom: 1px solid var(--divider);
+}
+.week-body .btn {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.week-body .week-memo {
+  margin: 0 0 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-muted);
 }
