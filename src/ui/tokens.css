@@ -1,0 +1,65 @@
+/* ALPHA JOURNAL design tokens — source of truth: "ALPHA JOURNAL 디자인 시안" canvas.
+   Green is brand/action only. P&L uses KR convention: profit red, loss blue. */
+:root {
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --surface-muted: #f4f6f5;
+  --surface-sunken: #e9eeec;
+  --border: #e3e8e6;
+  --border-strong: #cfd8d4;
+  --divider: #f0f3f2;
+
+  --text: #14201b;
+  --text-secondary: #5b6b64;
+  --text-nav: #3f4d47;
+  --text-faint: #8a9993;
+
+  --brand: #0b7d3e;
+  --brand-hover: #075a2c;
+  --brand-tint: #e8f5ec;
+  --brand-tint-border: #9fcdb0;
+  --on-brand: #ffffff;
+
+  --profit: #c8102e;
+  --loss: #1d4ed8;
+  --profit-tint: rgba(200, 16, 46, 0.12);
+  --loss-tint: rgba(29, 78, 216, 0.12);
+
+  --warn-bg: #fff7e6;
+  --warn-border: #f2d9a6;
+  --warn-text: #7a4f00;
+  --alert-bg: #fdecec;
+  --alert-text: #b42318;
+
+  --font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --sidebar-w: 232px;
+  --tabbar-h: 64px;
+  --touch: 44px;
+}
+
+/* Dark theme is opt-in (PRD 9.1: light is the default). */
+:root[data-theme='dark'] {
+  --bg: #0f1513;
+  --surface: #161e1b;
+  --surface-muted: #1c2622;
+  --surface-sunken: #222e2a;
+  --border: #2a3632;
+  --border-strong: #3a4843;
+  --divider: #1f2925;
+  --text: #e6ece9;
+  --text-secondary: #9aaaa3;
+  --text-nav: #c2cec9;
+  --text-faint: #6f7f78;
+  --brand: #34c26f;
+  --brand-hover: #5fd68f;
+  --brand-tint: #15301f;
+  --brand-tint-border: #2d6a44;
+  --on-brand: #0b1a12;
+  --profit: #ff5c6c;
+  --loss: #6b9bff;
+}
