@@ -6,6 +6,7 @@ import { currencyOf } from '../../ui/tradeText'
 import { useRepoQuery } from '../../ui/useRepoQuery'
 import { coverImage } from './chartItems'
 import { FallbackImg } from './FallbackImg'
+import { tradeDate } from '../../core/calendar'
 import { exitTime, filterGallery, NO_FILTERS, type GalleryFilters, type PeriodFilter, type ResultFilter } from './gallery'
 
 const RESULTS: { v: ResultFilter; label: string }[] = [
@@ -158,7 +159,7 @@ function GalleryCard({ t }: { t: TradeBundle }) {
         </div>
         <div className="row tight small">
           <span className="faint">
-            {at ? new Date(at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }) : ''}
+            {at ? tradeDate(at, p.market).slice(2).replace(/-/g, '.') : ''}
             {p.setup ? ` · ${p.setup}` : ''}
           </span>
           <PnlText value={t.summary.r} kind="r" className="push-right strong" />

@@ -12,6 +12,9 @@ interface ShellProps {
   children: ReactNode
 }
 
+/** Tab dots are small: past 99 they read 99+. */
+const cap = (n: number) => (n > 99 ? '99+' : String(n))
+
 export function Shell({ current, reviewPending, postDue, children }: ShellProps) {
   return (
     <div className="shell">
@@ -68,12 +71,12 @@ export function Shell({ current, reviewPending, postDue, children }: ShellProps)
             {label}
             {id === 'trades' && reviewPending > 0 && (
               <span className="tab-dot" aria-label={`복기 대기 ${reviewPending}건`}>
-                {reviewPending}
+                {cap(reviewPending)}
               </span>
             )}
             {id === 'trades' && reviewPending === 0 && postDue > 0 && (
               <span className="tab-dot warn" aria-label={`사후 차트 필요 ${postDue}건`}>
-                {postDue}
+                {cap(postDue)}
               </span>
             )}
           </a>
