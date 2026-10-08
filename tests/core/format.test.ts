@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney, formatR, pnlTone } from '../../src/core/format'
+import { formatMoney, formatPct, formatPrice, formatR, parseAmount, pnlTone } from '../../src/core/format'
 
 describe('formatR', () => {
   it('signs positive and negative values', () => {
@@ -26,6 +26,32 @@ describe('formatMoney', () => {
   it('can drop the plus sign but keeps the minus', () => {
     expect(formatMoney(8372500, 'KRW', false)).toBe('₩8,372,500')
     expect(formatMoney(-5, 'USD', false)).toBe('−$5.00')
+  })
+})
+
+describe('parseAmount / formatPrice / formatPct', () => {
+  it('parses typed numbers with separators and symbols', () => {
+    expect(parseAmount('98,500')).toBe(98500)
+    expect(parseAmount(' 72.40 ')).toBe(72.4)
+    expect(parseAmount('₩30,000,000')).toBe(30_000_000)
+    expect(parseAmount('$1,234.5')).toBe(1234.5)
+    expect(parseAmount('.5')).toBe(0.5)
+    expect(parseAmount('3.')).toBe(3)
+  })
+  it('rejects empty and non-numeric text', () => {
+    expect(parseAmount('')).toBeNaN()
+    expect(parseAmount('12a')).toBeNaN()
+    expect(parseAmount('1.2.3')).toBeNaN()
+  })
+  it('formats prices per currency', () => {
+    expect(formatPrice(94100.4, 'KRW')).toBe('94,100')
+    expect(formatPrice(69.8, 'USD')).toBe('69.8')
+    expect(formatPrice(69.123456, 'USD')).toBe('69.1235')
+    expect(formatPrice(NaN, 'USD')).toBe('')
+  })
+  it('formats percents', () => {
+    expect(formatPct(27.9771)).toBe('27.98%')
+    expect(formatPct(4.4670, 1)).toBe('4.5%')
   })
 })
 

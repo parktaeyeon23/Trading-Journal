@@ -31,6 +31,25 @@ export function formatMoney(amount: number, currency: Currency, signed = true): 
   return `${s}${symbol}${rounded}`
 }
 
+/** Parses user-typed numbers like "98,500", " 72.40 ", "₩1,000". NaN when not a number. */
+export function parseAmount(text: string): number {
+  const s = text.replace(/[,\s₩$]/g, '')
+  if (!/^-?\d*\.?\d+$/.test(s) && !/^-?\d+\.$/.test(s)) return NaN
+  return Number(s)
+}
+
+/** Price as typed back into an input: KRW whole numbers, USD up to 4 decimals without trailing zeros. */
+export function formatPrice(n: number, currency: Currency): string {
+  if (!Number.isFinite(n)) return ''
+  if (currency === 'KRW') return Math.round(n).toLocaleString('en-US')
+  return String(Math.round(n * 10000) / 10000)
+}
+
+/** 27.96% style, one or two decimals. */
+export function formatPct(n: number, digits = 2): string {
+  return `${n.toFixed(digits)}%`
+}
+
 /** Tone for coloring a P&L value: KR convention → profit red, loss blue. */
 export type PnlTone = 'profit' | 'loss' | 'flat'
 export function pnlTone(n: number): PnlTone {

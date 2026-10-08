@@ -1,7 +1,7 @@
 /**
  * Web app entry. Every request is a POST with a JSON body (sent as text/plain
  * by the app to avoid a CORS preflight):
- *   { "secret": "...", "action": "ping|pullAll|upsert|softDelete|batch|getSettings", ...params }
+ *   { "secret": "...", "action": "ping|pullAll|upsert|softDelete|batch|getSettings|getQuote", ...params }
  * Every response is JSON: { ok: true, ... } or { ok: false, error: { code, message } }.
  * Apps Script web apps cannot set HTTP status codes, so callers check `ok`.
  */
@@ -40,6 +40,8 @@ function handleRequest(req) {
         })
       case 'getSettings':
         return getSettings_()
+      case 'getQuote':
+        return getQuote_(req.symbol, req.market)
       case 'upsert':
         return withLock_(function () {
           return { ok: true, serverTime: nowIso_(), results: [runOp_({ op: 'upsert', entity: req.entity, rows: req.rows })] }

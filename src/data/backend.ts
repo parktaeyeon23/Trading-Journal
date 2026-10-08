@@ -29,6 +29,27 @@ export interface UpsertOp {
   rows: BaseRow[]
 }
 
+export interface QuoteBar {
+  date: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number | null
+}
+
+export interface QuoteResult {
+  /** Source symbol, e.g. 042700.KQ. */
+  symbol: string
+  /** MarketCache symbol, e.g. KR:042700. */
+  cacheSymbol: string
+  name: string | null
+  currency: string | null
+  price: number | null
+  asOf: string | null
+  /** Daily bars, oldest first (about 3 months). */
+  bars: QuoteBar[]
+}
+
 /**
  * Everything the app needs from a backend. The app depends on this interface
  * only, so moving off Apps Script later means writing one new adapter.
@@ -39,6 +60,8 @@ export interface BackendAdapter {
   /** Runs ops in order (parents first) and returns one result per op. */
   batch(ops: UpsertOp[]): Promise<UpsertResult[]>
   getSettings(): Promise<Record<string, unknown>>
+  /** Live daily quote; also caches the bars server-side (they arrive in MarketCache by sync). */
+  getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult>
 }
 
 export type BackendErrorCode =
@@ -51,6 +74,8 @@ export type BackendErrorCode =
   | 'unknown_entity'
   | 'too_many_rows'
   | 'busy'
+  | 'quote_not_found'
+  | 'quote_failed'
   | 'internal'
 
 export class BackendError extends Error {

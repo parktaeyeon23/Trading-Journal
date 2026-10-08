@@ -1,4 +1,4 @@
-import { BackendError, type BackendAdapter, type BackendErrorCode, type PullResult, type UpsertOp, type UpsertResult } from './backend'
+import { BackendError, type BackendAdapter, type BackendErrorCode, type PullResult, type QuoteResult, type UpsertOp, type UpsertResult } from './backend'
 
 export interface GasConfig {
   /** Web app URL ending in /exec. */
@@ -37,7 +37,18 @@ function fetchTransport(url: string, timeoutMs = 30000): Transport {
   }
 }
 
-const KNOWN_CODES: BackendErrorCode[] = ['bad_request', 'unauthorized', 'not_setup', 'unknown_action', 'unknown_entity', 'too_many_rows', 'busy', 'internal']
+const KNOWN_CODES: BackendErrorCode[] = [
+  'bad_request',
+  'unauthorized',
+  'not_setup',
+  'unknown_action',
+  'unknown_entity',
+  'too_many_rows',
+  'busy',
+  'quote_not_found',
+  'quote_failed',
+  'internal',
+]
 
 export class GasAdapter implements BackendAdapter {
   private config: GasConfig
@@ -74,6 +85,11 @@ export class GasAdapter implements BackendAdapter {
     if (!ops.length) return []
     const r = await this.call<{ results: UpsertResult[] }>('batch', { ops })
     return r.results
+  }
+
+  async getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult> {
+    const r = await this.call<QuoteResult>('getQuote', { symbol, market })
+    return { symbol: r.symbol, cacheSymbol: r.cacheSymbol, name: r.name, currency: r.currency, price: r.price, asOf: r.asOf, bars: r.bars }
   }
 
   async getSettings() {

@@ -13,6 +13,7 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 | `Sheets.js` | 헤더 이름 기반 시트 읽기·쓰기 |
 | `Api.js` | `doPost` 웹앱 API, secret 인증, LockService |
 | `Setup.js` | `setupSheets()` 초기 설정(멱등), `backupSpreadsheet()` |
+| `Quote.js` | `getQuote` — Yahoo 일봉 시세 조회(소스 의존은 `fetchDailyBars_` 하나), MarketCache에 캐시 |
 | `Backup.js` | `installBackupTrigger()` 매일 03시 자동 백업 예약, `backupDaily()` 백업 + 오래된 사본 정리 |
 | `Tests.js` | 에디터에서 돌리는 `testApi_all()` — 임시 시트로만 실행 |
 
@@ -21,7 +22,7 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 ## 처음 배포 (한 번)
 
 1. [script.google.com](https://script.google.com) → 새 프로젝트, 이름 "ALPHA JOURNAL API".
-2. 이 폴더의 `.js` 파일 8개를 같은 이름의 스크립트 파일로 붙여넣는다 (편집기에서 + → 스크립트). `appsscript.json`은 프로젝트 설정 → "편집기에 appsscript.json 매니페스트 파일 표시"를 켠 뒤 내용을 덮어쓴다.
+2. 이 폴더의 `.js` 파일 9개를 같은 이름의 스크립트 파일로 붙여넣는다 (편집기에서 + → 스크립트). `appsscript.json`은 프로젝트 설정 → "편집기에 appsscript.json 매니페스트 파일 표시"를 켠 뒤 내용을 덮어쓴다.
    - clasp를 쓰면: `npm i -g @google/clasp && clasp login && clasp create --type standalone --title "ALPHA JOURNAL API" --rootDir gas && clasp push`
 3. 함수 선택에서 `setupSheets` → 실행. 권한 승인(스프레드시트·Drive)을 한다.
    - 내 Drive에 "ALPHA JOURNAL/ALPHA JOURNAL DB" 스프레드시트가 생긴다.
@@ -54,7 +55,10 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 { "secret": "…", "action": "softDelete", "entity": "Fills", "ids": ["…"] }
 { "secret": "…", "action": "batch", "ops": [ { "op": "upsert", "entity": "Positions", "rows": [] }, { "op": "upsert", "entity": "Fills", "rows": [] } ] }
 { "secret": "…", "action": "getSettings" }
+{ "secret": "…", "action": "getQuote", "symbol": "042700", "market": "KR" }
 ```
+
+`getQuote`: KR은 6자리 종목코드를 코스피(.KS) → 코스닥(.KQ) 순으로 찾는다. 약 3개월 일봉을 돌려주고 MarketCache(`KR:042700|2026-10-07` 같은 id)에 저장해 모든 기기로 동기화한다. 값이 같은 봉은 다시 쓰지 않는다.
 
 | 동작 | 규칙 |
 | --- | --- |
@@ -66,4 +70,4 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 | synced_at | 모든 쓰기에 서버가 찍는 시각. 클라이언트가 보낸 값은 무시하고 덮어쓴다 |
 | 한도 | op당 500행. 쓰기와 pullAll은 LockService로 줄 세움, 20초 안에 못 잡으면 `busy` |
 
-에러 코드: `bad_request`, `unauthorized`, `not_setup`, `unknown_action`, `unknown_entity`, `too_many_rows`, `busy`, `internal`.
+에러 코드: `bad_request`, `unauthorized`, `not_setup`, `unknown_action`, `unknown_entity`, `too_many_rows`, `busy`, `quote_not_found`, `quote_failed`, `internal`.

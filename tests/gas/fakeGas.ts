@@ -121,19 +121,28 @@ export interface FakeGas {
   /** Files copied by makeCopy, newest last. */
   files: FakeFile[]
   triggers: { handler: string; hour: number }[]
+  http: FakeHttp
   /** Overrides "now" for files created by makeCopy. */
   setNow(d: Date): void
   /** Calls a global function defined by the /gas files. */
   call<T = any>(fn: string, ...args: unknown[]): T
 }
 
-const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Backup.js', 'Tests.js']
+const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Backup.js', 'Quote.js', 'Tests.js']
+
+export interface FakeHttp {
+  /** url → [status, body]; unmatched urls return 404. */
+  routes: Map<string, [number, string]>
+  requests: string[]
+  failNetwork: boolean
+}
 
 export function loadGas(): FakeGas {
   const spreadsheets = new Map<string, FakeSpreadsheet>()
   const props = new Map<string, string>()
   const files: FakeFile[] = []
   const triggers: { handler: string; hour: number }[] = []
+  const http: FakeHttp = { routes: new Map(), requests: [], failNetwork: false }
   let now = () => new Date()
   const asDriveFile = (f: FakeFile) => ({
     getId: () => f.id,
@@ -229,6 +238,14 @@ export function loadGas(): FakeGas {
         return b
       },
     },
+    UrlFetchApp: {
+      fetch: (url: string) => {
+        http.requests.push(url)
+        if (http.failNetwork) throw new Error('DNS error')
+        const [status, body] = http.routes.get(url.split('?')[0]) ?? [404, '{"chart":{"result":null}}']
+        return { getResponseCode: () => status, getContentText: () => body }
+      },
+    },
     Logger: { log: () => {} },
   }
 
@@ -243,6 +260,7 @@ export function loadGas(): FakeGas {
     props,
     files,
     triggers,
+    http,
     setNow: (d) => {
       now = () => d
     },
