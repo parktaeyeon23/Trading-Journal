@@ -44,3 +44,18 @@ describe('notes', () => {
     expect(await readWeeklyQuestions(repo)).toEqual(['질문 A', '질문 B'])
   })
 })
+
+describe('saved views', () => {
+  it('saves by name, replaces, sorts and deletes', async () => {
+    const { readSavedViews, saveView, deleteView } = await import('../../src/data/savedViews')
+    expect(await readSavedViews(repo)).toEqual([])
+    await saveView(repo, { name: 'KR 눌림목 A등급', filters: { market: 'KR', setup: '눌림목', grade: 'A' } })
+    await saveView(repo, { name: 'US 전체', filters: { market: 'US' } })
+    await saveView(repo, { name: 'KR 눌림목 A등급', filters: { market: 'KR', setup: '눌림목', grade: 'B' } })
+    const views = await readSavedViews(repo)
+    expect(views.map((v) => v.name)).toEqual(['KR 눌림목 A등급', 'US 전체'])
+    expect(views[0].filters.grade).toBe('B')
+    await deleteView(repo, 'US 전체')
+    expect((await readSavedViews(repo)).map((v) => v.name)).toEqual(['KR 눌림목 A등급'])
+  })
+})

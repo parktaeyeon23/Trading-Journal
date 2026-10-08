@@ -97,7 +97,8 @@ export interface ChartImage extends BaseRow {
 }
 
 export interface Tag extends BaseRow {
-  family: 'setup' | 'mistake' | 'emotion' | 'regime'
+  /** reason = 진입 근거 태그, picked on the plan (PositionTags without phase). */
+  family: 'setup' | 'mistake' | 'emotion' | 'regime' | 'reason'
   name: string
   color?: string | null
 }

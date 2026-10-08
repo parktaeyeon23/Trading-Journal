@@ -8,6 +8,7 @@ const FAMILIES: { v: Tag['family']; label: string; help: string }[] = [
   { v: 'setup', label: '셋업', help: '계획의 셋업 목록. 이름이 셋업별 체크리스트 규칙과 연결됩니다.' },
   { v: 'mistake', label: '실수', help: '복기에서 고르는 실수. 분석 탭에서 실수별 비용으로 집계됩니다.' },
   { v: 'emotion', label: '감정', help: '진입·보유·청산 단계별 감정.' },
+  { v: 'reason', label: '근거', help: '계획에서 고르는 진입 근거. 분석 탭에서 근거별 성과로 집계됩니다.' },
 ]
 
 export function TagsCard() {

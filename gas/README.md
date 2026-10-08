@@ -63,6 +63,8 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 
 `uploadImage`: 원본(긴 변 2400px)과 썸네일(400px)을 Drive에 "링크가 있는 모든 사용자 · 보기"로 저장하고 ChartImages 행(`file_id`, `thumb_file_id`)을 써서 `{ ok, row }`로 돌려준다. 같은 id로 다시 보내면 파일을 또 만들지 않고 기존 행을 돌려준다(`duplicate: true`) — 응답을 못 받고 재시도해도 중복이 생기지 않는다. 형식은 webp·jpeg·png, 최대 15MB. ChartImages 행이 `deleted=true`가 되면(upsert·softDelete 모두) 원본·썸네일 파일을 휴지통으로 옮긴다. TradingView 스냅샷 링크는 파일 없이 `annotation: { link, image }`만 있는 일반 ChartImages 행이다.
 
+`getBars`: `{ "action": "getBars", "symbol": "CRDO", "market": "US", "from": "2026-09-01", "to": "2026-09-30" }` — 청산된 트레이드의 보유 기간 일봉(MFE/MAE 계산용)을 받아 MarketCache에 저장한다. 최대 800일 구간.
+
 `getQuote`에 `market: "IDX"`를 주면 지수·환율 시리즈를 돌려준다: `KOSPI`, `KOSDAQ`, `SPX`, `NASDAQ`, `USDKRW` (MarketCache id `IDX:USDKRW|2026-10-07` 형식).
 
 `getQuote`: KR은 6자리 종목코드를 코스피(.KS) → 코스닥(.KQ) 순으로 찾는다. 약 3개월 일봉을 돌려주고 MarketCache(`KR:042700|2026-10-07` 같은 id)에 저장해 모든 기기로 동기화한다. 값이 같은 봉은 다시 쓰지 않는다.
@@ -78,3 +80,5 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 | 한도 | op당 500행. 쓰기와 pullAll은 LockService로 줄 세움, 20초 안에 못 잡으면 `busy` |
 
 에러 코드: `bad_request`, `unauthorized`, `not_setup`, `unknown_action`, `unknown_entity`, `too_many_rows`, `busy`, `quote_not_found`, `quote_failed`, `too_large`, `internal`.
+
+Tags.family 값: `setup`, `mistake`, `emotion`, `regime`, `reason`(진입 근거).

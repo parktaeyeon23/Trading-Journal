@@ -53,7 +53,25 @@ const US = ['CRDO', 'NVDA', 'ANET', 'CELH', 'PLTR', 'APP', 'HIMS', 'RKLB']
 const SETUPS = ['VCP 돌파', '눌림목', 'EP']
 const MISTAKES = ['tag-mistake-chase', 'tag-mistake-late-stop', 'tag-mistake-early-exit', 'tag-mistake-oversize', 'tag-mistake-fomo']
 
-const data: Record<string, unknown[]> = { Positions: [], Plans: [], Fills: [], Reviews: [], PositionTags: [], MarketCache: [] }
+const REASONS = ['tag-reason-volume', 'tag-reason-rs', 'tag-reason-tight', 'tag-reason-earnings', 'tag-reason-theme', 'tag-reason-ma']
+const REGIMES = ['trend', 'transition', 'range', null]
+const data: Record<string, unknown[]> = { Positions: [], Plans: [], Fills: [], StopHistory: [], Reviews: [], PositionTags: [], MarketCache: [] }
+/** Daily bars along each trade's path (first trade to claim a symbol-day wins). */
+const barIds = new Set<string>()
+function pathBars(market: string, ticker: string, fromMs: number, toMs: number, entry: number, exit: number) {
+  const days: number[] = []
+  for (let ms = fromMs; ms <= toMs; ms += DAY) if (weekday(ms)) days.push(ms)
+  days.forEach((ms, i) => {
+    const date = new Date(ms).toISOString().slice(0, 10)
+    const id = `${market}:${ticker}|${date}`
+    if (barIds.has(id)) return
+    barIds.add(id)
+    const mid = entry + ((exit - entry) * i) / Math.max(1, days.length - 1)
+    const swing = entry * (0.01 + rnd() * 0.04)
+    const at = new Date(ms).toISOString()
+    data.MarketCache.push({ ...base('mc', at), id, symbol: `${market}:${ticker}`, date, open: mid, high: mid + swing, low: mid - swing * 0.8, close: mid })
+  })
+}
 
 for (let i = 0; i < n; i++) {
   const market = rnd() < 0.6 ? 'KR' : 'US'
@@ -63,8 +81,9 @@ for (let i = 0; i < n; i++) {
   const qty = market === 'KR' ? 20 + Math.floor(rnd() * 200) : 10 + Math.floor(rnd() * 150)
   const open = i < 8 // a few still open
   const at = new Date(start).toISOString()
-  const pos = { ...base('pos', at), ticker: market === 'KR' ? pick(KR) : pick(US), market, direction: 'long', setup: pick(SETUPS), status: open ? 'open' : 'done', original_stop: stop, no_plan: rnd() < 0.08 }
+  const pos = { ...base('pos', at), ticker: market === 'KR' ? pick(KR) : pick(US), market, direction: 'long', setup: pick(SETUPS), status: open ? 'open' : 'done', original_stop: stop, no_plan: rnd() < 0.08, regime: pick(REGIMES) }
   data.Positions.push(pos)
+  for (const r of new Set([pick(REASONS), ...(rnd() < 0.4 ? [pick(REASONS)] : [])])) data.PositionTags.push({ ...base('pt', at), position_id: pos.id, tag_id: r, phase: null })
   if (!pos.no_plan) data.Plans.push({ ...base('plan', at), position_id: pos.id, plan_entry: price, plan_stop: stop, plan_qty: qty, rpt_pct: 1.25, risk_amount: Math.round(qty * (price - stop) * 100) / 100 })
 
   // 1–2 entries, then 1–3 exits over the following days.
@@ -80,7 +99,13 @@ for (let i = 0; i < n; i++) {
     while (!weekday(day)) day += DAY
   }
   if (open) continue
+  if (rnd() < 0.3) {
+    const widen = rnd() < 0.3
+    const ns = market === 'KR' ? Math.round((widen ? stop * 0.97 : price) / 100) * 100 : Math.round((widen ? stop * 0.97 : price) * 100) / 100
+    data.StopHistory.push({ ...base('stop', at), position_id: pos.id, ts: tsOn(day - DAY, market), old_stop: stop, new_stop: ns, reason: widen ? '눌림 버티기' : '본전으로' })
+  }
   const exits = 1 + Math.floor(rnd() * 3)
+  let lastExit = price
   const win = rnd() < 0.45
   for (let x = 0; x < exits; x++) {
     day += DAY * (1 + Math.floor(rnd() * 4))
@@ -91,7 +116,9 @@ for (let i = 0; i < n; i++) {
     const move = win ? 0.02 + rnd() * 0.18 : -(0.01 + rnd() * 0.05)
     const p = Math.max(1, Math.round(price * (1 + move) * 100) / 100)
     data.Fills.push({ ...base('fill', at), position_id: pos.id, ts: tsOn(day, market), side: 'sell', price: market === 'KR' ? Math.round(p) : p, qty: q, fee: 0, tax: 0, pyramid_stage: null })
+    lastExit = p
   }
+  pathBars(market, pos.ticker, start, day, price, lastExit)
   const checklist = { 'builtin:entry': rnd() < 0.85, 'builtin:size': rnd() < 0.9, 'builtin:stop': rnd() < 0.8 }
   const kept = Object.values(checklist).filter(Boolean).length / 3
   const grade = pos.no_plan ? (kept >= 0.6 ? 'C' : 'D') : kept === 1 ? 'A' : kept >= 0.6 ? 'C' : 'D'

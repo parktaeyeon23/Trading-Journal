@@ -120,6 +120,28 @@ function GalleryColumn({ title, tone, list }: { title: string; tone: 'profit' | 
   )
 }
 
+const PAGE = 60
+
+/** A grid of trade cards with their cover chart (used by drill-downs elsewhere), 60 at a time. */
+export function TradeCards({ trades }: { trades: TradeBundle[] }) {
+  const [shown, setShown] = useState(PAGE)
+  if (!trades.length) return <p className="help">트레이드가 없습니다.</p>
+  return (
+    <div className="stack">
+      <div className="gallery-grid gallery-grid-narrow">
+        {trades.slice(0, shown).map((t) => (
+          <GalleryCard key={t.position.id} t={t} />
+        ))}
+      </div>
+      {trades.length > shown && (
+        <button type="button" className="btn btn-secondary" onClick={() => setShown((n) => n + PAGE)}>
+          더 보기 ({trades.length - shown})
+        </button>
+      )}
+    </div>
+  )
+}
+
 function GalleryCard({ t }: { t: TradeBundle }) {
   const p = t.position
   const cover = coverImage(t)

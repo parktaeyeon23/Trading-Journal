@@ -30,6 +30,12 @@ const DEFAULT_TAGS: { id: string; family: Tag['family']; name: string }[] = [
   { id: 'tag-emotion-fear', family: 'emotion', name: '두려움' },
   { id: 'tag-emotion-greed', family: 'emotion', name: '탐욕' },
   { id: 'tag-emotion-bored', family: 'emotion', name: '지루함' },
+  { id: 'tag-reason-volume', family: 'reason', name: '거래량 급증' },
+  { id: 'tag-reason-rs', family: 'reason', name: '상대강도 상위' },
+  { id: 'tag-reason-tight', family: 'reason', name: '변동성 수축' },
+  { id: 'tag-reason-earnings', family: 'reason', name: '실적·가이던스' },
+  { id: 'tag-reason-theme', family: 'reason', name: '테마·뉴스' },
+  { id: 'tag-reason-ma', family: 'reason', name: '이평선 지지' },
 ]
 
 const DEFAULT_RULES: { id: string; setup: string; text: string }[] = [
@@ -262,11 +268,11 @@ export async function saveReview(repo: LocalRepo, positionId: string, input: Rev
   // Sync mistake/emotion tags: keep matches, add new, soft-delete removed.
   const allTags = await repo.list('Tags', { includeDeleted: true })
   const family = new Map(allTags.map((x) => [x.id, x.family]))
-  // The review owns every tag that is not known to be a setup/regime tag —
+  // The review owns every tag that is not known to be a setup/regime/reason tag —
   // including ones whose Tag row has not synced to this device yet.
   const managed = t.tags.filter((pt) => {
     const f = family.get(pt.tag_id)
-    return f !== 'setup' && f !== 'regime'
+    return f !== 'setup' && f !== 'regime' && f !== 'reason' && !pt.tag_id.startsWith('tag-reason-')
   })
   const want = new Set([...input.mistakeTagIds.map((id) => `${id}|`), ...input.emotionTags.map((e) => `${e.tagId}|${e.phase}`)])
   const have = new Set<string>()
@@ -291,6 +297,18 @@ export async function saveReview(repo: LocalRepo, positionId: string, input: Rev
 
   await refreshStatus(repo, positionId)
   return review
+}
+
+/**
+ * Sets a trade's 진입 근거 tags (picked on the plan): keeps matches, adds new,
+ * soft-deletes removed. Other families are left alone.
+ */
+export async function setReasonTags(repo: LocalRepo, positionId: string, tagIds: string[]): Promise<void> {
+  const reasonIds = new Set((await repo.list('Tags', { includeDeleted: true })).filter((x) => x.family === 'reason').map((x) => x.id))
+  const current = (await repo.listByPosition('PositionTags', positionId)).filter((pt) => reasonIds.has(pt.tag_id))
+  const want = new Set(tagIds)
+  for (const pt of current) if (!want.has(pt.tag_id)) await repo.remove('PositionTags', pt.id)
+  for (const id of want) if (!current.some((pt) => pt.tag_id === id)) await repo.put('PositionTags', { position_id: positionId, tag_id: id, phase: null })
 }
 
 /** Active checklist rules for a setup (setup-specific first), excluding the don't-list. */

@@ -3,7 +3,7 @@ import { formatMoney, formatPct, formatPrice, parseAmount } from '../../core/for
 import { PYRAMID_PRESETS, splitStages } from '../../core/pyramid'
 import { useData } from '../../data/dataStore'
 import { readSetting, SETTING_KEYS } from '../../data/settings'
-import { createPlannedTrade, updatePlan, type TradeBundle } from '../../data/trades'
+import { createPlannedTrade, setReasonTags, updatePlan, type TradeBundle } from '../../data/trades'
 import type { Market, Position } from '../../data/types'
 import { navigate } from '../../ui/routes'
 import { Sheet } from '../../ui/Sheet'
@@ -49,7 +49,20 @@ export function PlanSheet({ trade, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const setups = useRepoQuery(async (r) => (await r.list('Tags')).filter((t) => t.family === 'setup').map((t) => t.name), []) ?? []
+  const tags = useRepoQuery((r) => r.list('Tags'), [])
+  const setups = (tags ?? []).filter((t) => t.family === 'setup').map((t) => t.name)
+  const reasonTags = (tags ?? []).filter((t) => t.family === 'reason').sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+  const reasonIds = new Set(reasonTags.map((t) => t.id))
+  // null until the user touches a tag: until then the trade's saved reason tags show (once the Tag rows have loaded).
+  const [reasons, setReasons] = useState<Set<string> | null>(null)
+  const picked = reasons ?? new Set((trade?.tags ?? []).filter((pt) => !pt.phase && reasonIds.has(pt.tag_id)).map((pt) => pt.tag_id))
+  const toggleReason = (id: string) => {
+    const next = new Set(picked)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setReasons(next)
+  }
+  const chosenReasons = [...picked].filter((id) => reasonIds.has(id))
   const account = useRepoQuery((r) => readSetting<number | null>(r, SETTING_KEYS.accountSize(market), null), [market])
 
   const entry = parseAmount(entryText)
@@ -100,6 +113,7 @@ export function PlanSheet({ trade, onClose }: Props) {
     try {
       if (!trade) {
         const created = await createPlannedTrade(repo, { position: { ...posFields, original_stop: stop }, plan: planFields })
+        await setReasonTags(repo, created.id, chosenReasons)
         onClose()
         navigate('trades', created.id)
       } else {
@@ -108,6 +122,7 @@ export function PlanSheet({ trade, onClose }: Props) {
           position: hasFills ? posFields : { ...posFields, original_stop: stop },
           plan: planFields,
         })
+        await setReasonTags(repo, trade.position.id, chosenReasons)
         onClose()
       }
     } finally {
@@ -171,6 +186,17 @@ export function PlanSheet({ trade, onClose }: Props) {
           <span className="field-label">진입 근거 (thesis) *</span>
           <input className="input" value={thesis} onChange={(e) => setThesis(e.target.value)} placeholder="3주 수축 후 피벗 돌파, 거래량 2배 이상이면 진입" />
         </label>
+        <div className="field">
+          <span className="field-label">근거 태그</span>
+          <div className="row wrap">
+            {reasonTags.map((t) => (
+              <button key={t.id} type="button" className="pill" aria-pressed={picked.has(t.id)} onClick={() => toggleReason(t.id)}>
+                {t.name}
+              </button>
+            ))}
+            {tags && !reasonTags.length && <span className="help">설정 → 태그 → 근거에서 추가하세요.</span>}
+          </div>
+        </div>
         <label className="field">
           <span className="field-label">무효화 조건 *</span>
           <input className="input" value={invalidation} onChange={(e) => setInvalidation(e.target.value)} placeholder="돌파 당일 저가 이탈 시 thesis 붕괴" />

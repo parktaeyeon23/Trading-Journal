@@ -50,7 +50,7 @@ export interface CalendarModel extends CalendarBase {
  */
 export function useCalendarModel(): CalendarModel | undefined {
   const base = useRepoQuery(loadBase, [])
-  const { market, setup, tagId, basis, unit } = useFilters()
+  const { market, setup, tagIds, grade, result, basis, unit } = useFilters()
 
   const shown = useMemo(
     () =>
@@ -58,9 +58,11 @@ export function useCalendarModel(): CalendarModel | undefined {
         (t) =>
           (market === 'ALL' || t.position.market === market) &&
           (!setup || t.position.setup === setup) &&
-          (!tagId || t.tags.some((x) => x.tag_id === tagId)),
+          tagIds.every((id) => t.tags.some((x) => x.tag_id === id)) &&
+          (!grade || t.review?.grade === grade) &&
+          (!result || (result === 'win' ? t.summary.pnl.realizedNet > 0 : result === 'loss' ? t.summary.pnl.realizedNet < 0 : t.summary.pnl.realizedNet === 0)),
       ),
-    [base, market, setup, tagId],
+    [base, market, setup, tagIds, grade, result],
   )
   const events = useMemo(
     () =>

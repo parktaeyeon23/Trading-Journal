@@ -22,6 +22,8 @@ interface DataState {
   saveConfig: (cfg: GasConfig | null) => Promise<void>
   /** Live quote through the backend. Throws BackendError('not_setup') when no backend is set. */
   getQuote: (symbol: string, market: QuoteMarket) => Promise<QuoteResult>
+  /** Bars for a closed trade's window; they arrive locally with the next sync pull. */
+  getBars: (symbol: string, market: 'KR' | 'US', from: string, to: string) => Promise<{ cacheSymbol: string; count: number }>
 }
 
 let initPromise: Promise<void> | null = null
@@ -71,6 +73,12 @@ export const useData = create<DataState>((set, get) => ({
       void engine.syncNow()
       void get().uploads?.run()
     }
+  },
+
+  getBars: async (symbol, market, from, to) => {
+    const adapter = makeAdapter(get().config)
+    if (!adapter) throw new BackendError('not_setup', '설정에서 백엔드를 먼저 연결하세요.')
+    return adapter.getBars(symbol, market, from, to)
   },
 
   getQuote: async (symbol, market) => {

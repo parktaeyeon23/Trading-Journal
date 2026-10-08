@@ -81,6 +81,8 @@ export interface BackendAdapter {
   getQuote(symbol: string, market: QuoteMarket): Promise<QuoteResult>
   /** Stores a chart image (idempotent by id) and returns the saved ChartImages row. */
   uploadImage(req: UploadImageRequest): Promise<BaseRow>
+  /** Daily bars for a date window, cached server-side in MarketCache (synced to every device). */
+  getBars(symbol: string, market: 'KR' | 'US', from: string, to: string): Promise<{ cacheSymbol: string; count: number }>
 }
 
 export type BackendErrorCode =

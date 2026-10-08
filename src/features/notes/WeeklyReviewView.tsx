@@ -84,6 +84,22 @@ function Numbers({ n }: { n: WeekNumbers }) {
           </div>
         </dl>
       )}
+      {n.trades > 0 && (
+        <dl className="tiles">
+          <div className="tile">
+            <dt>최고 트레이드</dt>
+            <dd className="num">{n.best ? <a href={hrefFor('trades', n.best.id)}>{n.best.ticker} {n.best.r !== null ? formatR(n.best.r) : n.best.krw !== null ? formatMoney(n.best.krw, 'KRW') : ''}</a> : '—'}</dd>
+          </div>
+          <div className="tile">
+            <dt>최악 트레이드</dt>
+            <dd className="num">{n.worst ? <a href={hrefFor('trades', n.worst.id)}>{n.worst.ticker} {n.worst.r !== null ? formatR(n.worst.r) : n.worst.krw !== null ? formatMoney(n.worst.krw, 'KRW') : ''}</a> : '—'}</dd>
+          </div>
+          <div className="tile">
+            <dt>규율 점수 추세 (4주)</dt>
+            <dd className="num">{n.disciplineTrend.map((d) => (d.score === null ? '—' : Math.round(d.score * 100))).join(' → ')}</dd>
+          </div>
+        </dl>
+      )}
       {n.krwMissing > 0 && <p className="help">환율이 없는 날의 US 청산 {n.krwMissing}건은 원화 합계에서 뺐습니다.</p>}
       <div>
         <div className="field-label">최다 실수 Top 3</div>

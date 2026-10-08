@@ -25,7 +25,7 @@ const MARKETS: { v: MarketFilter; label: string }[] = [
   { v: 'KR', label: 'KR' },
   { v: 'US', label: 'US' },
 ]
-const FAMILY_LABEL = { setup: '셋업 태그', mistake: '실수', emotion: '감정', regime: '국면' } as const
+const FAMILY_LABEL = { setup: '셋업 태그', reason: '진입 근거', mistake: '실수', emotion: '감정', regime: '국면' } as const
 
 const lastDayOf = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate()
 
@@ -38,7 +38,7 @@ export function CalendarScreen() {
   const [selected, setSelected] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
   const filters = useFilters()
-  const { unit, market, basis, showWeekends, setup, tagId, set } = filters
+  const { unit, market, basis, showWeekends, setup, tagIds, grade, result, set } = filters
   const model = useCalendarModel()
   const wide = useMedia('(min-width: 1180px)')
 
@@ -141,7 +141,7 @@ export function CalendarScreen() {
       <details className="cal-more">
         <summary>
           필터·표시
-          {(setup || tagId || basis === 'entry') && <span className="chip chip-auto">적용 중</span>}
+          {(setup || tagIds.length > 0 || grade || result || basis === 'entry') && <span className="chip chip-auto">적용 중</span>}
         </summary>
         <div className="row wrap">
           <div className="seg seg-small" role="group" aria-label="기준일">
@@ -160,9 +160,15 @@ export function CalendarScreen() {
               </option>
             ))}
           </select>
-          <select className="input input-small" value={tagId ?? ''} onChange={(e) => set({ tagId: e.target.value || null })} aria-label="태그">
+          <select
+            className="input input-small"
+            value={tagIds.length === 1 ? tagIds[0] : tagIds.length ? '__multi' : ''}
+            onChange={(e) => set({ tagIds: e.target.value && e.target.value !== '__multi' ? [e.target.value] : [] })}
+            aria-label="태그"
+          >
             <option value="">모든 태그</option>
-            {(['mistake', 'emotion', 'setup', 'regime'] as const).map((f) => {
+            {tagIds.length > 1 && <option value="__multi">태그 {tagIds.length}개 (분석 탭에서 설정)</option>}
+            {(['reason', 'mistake', 'emotion', 'setup', 'regime'] as const).map((f) => {
               const tags = model.tags.filter((t) => t.family === f)
               return tags.length ? (
                 <optgroup key={f} label={FAMILY_LABEL[f]}>
@@ -175,6 +181,13 @@ export function CalendarScreen() {
               ) : null
             })}
           </select>
+          {(grade || result) && (
+            <button type="button" className="pill" aria-pressed onClick={() => set({ grade: null, result: null })}>
+              {grade ? `${grade}등급` : ''}
+              {grade && result ? ' · ' : ''}
+              {result ? { win: '승', loss: '패', be: '본전' }[result] : ''} ✕
+            </button>
+          )}
           <label className="row tight">
             <input type="checkbox" checked={showWeekends} onChange={(e) => set({ showWeekends: e.target.checked })} />
             주말 표시

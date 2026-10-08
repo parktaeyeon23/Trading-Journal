@@ -116,3 +116,30 @@ describe('index and FX series', () => {
   })
 })
 
+
+describe('getBars', () => {
+  it('fetches a date window, keeps only that window, and caches it under the trade symbol', () => {
+    gas.http.routes.set(
+      YAHOO + 'CRDO',
+      chart('CRDO', -14400, [
+        ['2026-09-01', 70, 72, 69, 71],
+        ['2026-09-02', 71, 75, 70, 74],
+        ['2026-09-03', 74, 76, 73, 75],
+        ['2026-09-08', 75, 80, 74, 79],
+      ]),
+    )
+    const r = api({ action: 'getBars', symbol: 'crdo', market: 'US', from: '2026-09-02', to: '2026-09-03' })
+    expect(r).toMatchObject({ ok: true, cacheSymbol: 'US:CRDO', count: 2 })
+    const url = gas.http.requests[0]
+    expect(url).toContain('period1=' + (Date.parse('2026-09-01T00:00:00Z') / 1000))
+    expect(url).toContain('period2=' + (Date.parse('2026-09-05T00:00:00Z') / 1000))
+    expect(api({ action: 'pullAll' }).data.MarketCache.map((b: { id: string }) => b.id).sort()).toEqual(['US:CRDO|2026-09-02', 'US:CRDO|2026-09-03'])
+  })
+
+  it('refuses bad windows', () => {
+    expect(api({ action: 'getBars', symbol: 'CRDO', market: 'US', from: '2026-09-03', to: '2026-09-02' }).error.code).toBe('bad_request')
+    expect(api({ action: 'getBars', symbol: 'CRDO', market: 'US', from: '2020-01-01', to: '2026-09-02' }).error.code).toBe('bad_request')
+    expect(api({ action: 'getBars', symbol: 'CRDO', market: 'IDX', from: '2026-09-01', to: '2026-09-02' }).error.code).toBe('bad_request')
+    expect(api({ action: 'getBars', symbol: 'NOPE', market: 'US', from: '2026-09-01', to: '2026-09-02' }).error.code).toBe('quote_not_found')
+  })
+})

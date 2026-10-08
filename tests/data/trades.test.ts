@@ -16,6 +16,7 @@ import {
   removeFill,
   rulesForSetup,
   saveReview,
+  setReasonTags,
 } from '../../src/data/trades'
 
 let repo: LocalRepo
@@ -133,5 +134,23 @@ describe('defaults', () => {
     const rules = await repo.list('Rules')
     expect(rulesForSetup(rules, '눌림목').map((r) => r.text)).toContain('1·2차 눌림만 (3차 눌림 제외)')
     expect(rulesForSetup(rules, null)).toEqual([])
+  })
+})
+
+describe('reason tags', () => {
+  it('are set on the plan and survive a review that edits mistake tags', async () => {
+    await ensureDefaults(repo)
+    const p = await createPlannedTrade(repo, {
+      position: { ticker: 'CRDO', market: 'US', direction: 'long', setup: 'VCP 돌파', original_stop: 69.8 },
+      plan: { plan_entry: 72.4, plan_qty: 10 },
+    })
+    await setReasonTags(repo, p.id, ['tag-reason-volume', 'tag-reason-rs'])
+    await setReasonTags(repo, p.id, ['tag-reason-rs', 'tag-reason-tight'])
+    const ids = async () => (await loadTrade(repo, p.id))!.tags.map((t) => t.tag_id).sort()
+    expect(await ids()).toEqual(['tag-reason-rs', 'tag-reason-tight'])
+    await addFill(repo, p.id, { ts: ts('2'), side: 'buy', price: 72.4, qty: 10 })
+    await addFill(repo, p.id, { ts: ts('3'), side: 'sell', price: 75, qty: 10 })
+    await saveReview(repo, p.id, { checklist: { a: true }, grade: 'A', good: null, improve: null, next_rule: null, promoted_rule: false, mistakeTagIds: ['tag-mistake-chase'], emotionTags: [] })
+    expect(await ids()).toEqual(['tag-mistake-chase', 'tag-reason-rs', 'tag-reason-tight'])
   })
 })

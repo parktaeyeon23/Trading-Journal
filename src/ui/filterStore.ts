@@ -1,16 +1,25 @@
 import { create } from 'zustand'
+import type { Grade, ResultFilter } from '../core/analysis'
 import type { CalUnit, DateBasis } from '../core/calendar'
 
 export type MarketFilter = 'ALL' | 'KR' | 'US'
 
 /**
- * Filters shared by the calendar and (Step 8) the analysis tab. Display
- * preferences (unit, basis, weekends) are remembered on this device.
+ * Filters shared by the calendar and the analysis tab (AND of all set).
+ * Display preferences (unit, basis, weekends) are remembered on this device.
  */
-interface FilterState {
+export interface SharedFilters {
   market: MarketFilter
   setup: string | null
-  tagId: string | null
+  /** At most one tag per family; a trade must carry all of them. */
+  tagIds: string[]
+  grade: Grade | null
+  result: ResultFilter | null
+}
+
+export const NO_SHARED_FILTERS: SharedFilters = { market: 'ALL', setup: null, tagIds: [], grade: null, result: null }
+
+interface FilterState extends SharedFilters {
   unit: CalUnit
   basis: DateBasis
   showWeekends: boolean
@@ -40,9 +49,7 @@ function savePrefs(p: Prefs) {
 const prefs = loadPrefs()
 
 export const useFilters = create<FilterState>((set, get) => ({
-  market: 'ALL',
-  setup: null,
-  tagId: null,
+  ...NO_SHARED_FILTERS,
   unit: prefs.unit ?? 'KRW',
   basis: prefs.basis ?? 'exit',
   showWeekends: prefs.showWeekends ?? false,

@@ -52,6 +52,10 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
 - 캘린더 손익은 청산 체결 단위로 그 시장의 거래일(KR 서울, US 뉴욕 날짜)에 넣는다 (`src/core/calendar.ts`). 원화 환산은 체결일 USD/KRW(MarketCache `IDX:USDKRW`), 환율이 없으면 추측하지 않고 "환산 불가"로 센다.
   - 캘린더·분석 공용 필터(시장·셋업·태그·단위·기준일)는 `src/ui/filterStore.ts`.
   - 일간 노트 id `note-<날짜>`, 주간 리뷰 id `week-<월요일>` 고정 (`src/data/notes.ts`).
+- 분석 지표는 `src/core/analysis.ts` (청산 완료 포지션만, 값 접근자로 통화·R 공용). 화면은 `buildAnaTrade`로 만든 AnaTrade만 쓴다.
+  - MFE/MAE용 종목 일봉은 GAS `getBars`로 받아 MarketCache(`KR:042700|날짜`)에 저장·동기화 (`src/data/barBackfill.ts`).
+  - 진입 근거 태그는 Tag family `reason`, 계획에서 `setReasonTags`로만 바꾼다. 복기 저장은 reason 태그를 건드리지 않는다.
+  - 저장된 뷰는 Settings `saved_views`, 월말 대조는 Settings `recon_YYYY-MM`.
 - R은 항상 원 손절가 기준. 손절 이동 후에도 바뀌지 않는다.
 - 손익·R·MFE/MAE는 저장하지 않고 체결과 시세 캐시에서 계산한다.
 - `/src/core`는 순수 함수, 모든 함수에 Vitest 테스트.

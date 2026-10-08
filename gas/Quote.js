@@ -17,6 +17,35 @@ var QUOTE_MARKETS = ['KR', 'US', 'IDX']
 var SERIES_HOUR = 7
 var SERIES_MINUTE = 30
 
+var BARS_MAX_DAYS = 800
+
+/**
+ * Daily bars for a date window (MFE/MAE of a closed trade), cached in MarketCache.
+ * Request: { action: "getBars", symbol, market: "KR" | "US", from: "YYYY-MM-DD", to: "YYYY-MM-DD" }
+ * Response: { ok, cacheSymbol, count, bars }
+ */
+function getBars_(symbol, market, from, to) {
+  if (typeof symbol !== 'string' || !symbol.trim()) throw apiError_('bad_request', 'symbol is required.')
+  if (market !== 'KR' && market !== 'US') throw apiError_('bad_request', 'market must be KR or US.')
+  var re = /^\d{4}-\d{2}-\d{2}$/
+  if (!re.test(from || '') || !re.test(to || '') || from > to) throw apiError_('bad_request', 'from/to must be YYYY-MM-DD with from <= to.')
+  var p1 = Date.parse(from + 'T00:00:00Z') / 1000 - 86400
+  var p2 = Date.parse(to + 'T00:00:00Z') / 1000 + 2 * 86400
+  if ((p2 - p1) / 86400 > BARS_MAX_DAYS) throw apiError_('bad_request', 'window is too long (max ' + BARS_MAX_DAYS + ' days).')
+  var candidates = yahooSymbols_(symbol.trim().toUpperCase(), market)
+  var data = null
+  for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i], { period1: p1, period2: p2 })
+  if (!data) throw apiError_('quote_not_found', '시세를 찾지 못했습니다: ' + symbol)
+  var bars = data.bars.filter(function (b) {
+    return b.date >= from && b.date <= to
+  })
+  var cacheSymbol = market + ':' + symbol.trim().toUpperCase()
+  withLock_(function () {
+    cacheBars_(cacheSymbol, bars)
+  })
+  return { ok: true, cacheSymbol: cacheSymbol, count: bars.length, bars: bars }
+}
+
 function getQuote_(symbol, market, range) {
   if (typeof symbol !== 'string' || !symbol.trim()) throw apiError_('bad_request', 'symbol is required.')
   if (QUOTE_MARKETS.indexOf(market) < 0) throw apiError_('bad_request', 'market must be KR, US or IDX.')
@@ -57,8 +86,10 @@ function yahooSymbols_(symbol, market) {
  * @return {{symbol, name, currency, price, bars: Array<{date, open, high, low, close}>} | null}
  *   null when the source has no such symbol; throws quote_failed when the source is unreachable.
  */
+/** @param {string|{period1: number, period2: number}=} range a Yahoo range ('3mo') or an epoch-second window. */
 function fetchDailyBars_(yahooSymbol, range) {
-  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?range=' + (range || QUOTE_RANGE) + '&interval=1d'
+  var span = range && typeof range === 'object' ? 'period1=' + Math.floor(range.period1) + '&period2=' + Math.floor(range.period2) : 'range=' + (range || QUOTE_RANGE)
+  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?' + span + '&interval=1d'
   var res
   try {
     res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } })

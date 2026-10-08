@@ -187,6 +187,26 @@ describe('sync with the Apps Script backend', () => {
   })
 })
 
+describe('resending rejected rows', () => {
+  it('queues refused rows again as they are now, once, and clears their records', async () => {
+    const { repo, engine } = await device()
+    // A fill whose position never reached the server is refused (broken reference).
+    const pos = { id: 'p-late', ticker: 'CRDO', market: 'US' as const, direction: 'long' as const, status: 'open' as const }
+    await repo.put('Fills', { position_id: pos.id, ts: new Date().toISOString(), side: 'buy', price: 72, qty: 1 })
+    expect(await engine.syncNow()).toMatchObject({ rejected: 1 })
+    expect(await repo.pendingCount()).toBe(0)
+    await repo.put('Positions', pos)
+    await engine.syncNow()
+    expect(serverRows('Fills')).toHaveLength(0)
+
+    expect(await repo.resendRejected()).toBe(1)
+    expect(await repo.listConflicts()).toEqual([])
+    expect(await engine.syncNow()).toMatchObject({ rejected: 0 })
+    expect(serverRows('Fills')).toHaveLength(1)
+    expect(await repo.resendRejected()).toBe(0)
+  })
+})
+
 describe('GasAdapter over fetch', () => {
   afterEach(() => vi.unstubAllGlobals())
 

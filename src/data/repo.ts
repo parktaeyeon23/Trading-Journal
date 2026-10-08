@@ -207,6 +207,36 @@ export class LocalRepo {
     await this.db.clear(CONFLICTS)
   }
 
+  /**
+   * Sends the server-refused rows again as they are now on this device (e.g.
+   * after a backend update that accepts them), then clears those records.
+   * @return how many rows were queued
+   */
+  async resendRejected(): Promise<number> {
+    const tx = this.db.transaction([...ENTITY_ORDER, OUTBOX, CONFLICTS], 'readwrite')
+    const at = this.now().toISOString()
+    const seen = new Set<string>()
+    let n = 0
+    let cursor = await tx.objectStore(CONFLICTS).openCursor()
+    while (cursor) {
+      const c = cursor.value as ConflictRecord
+      if (c.kind === 'rejected') {
+        const key = `${c.entity}|${c.id}`
+        const row = c.id ? ((await tx.objectStore(c.entity).get(c.id)) as BaseRow | undefined) : undefined
+        if (row && !seen.has(key)) {
+          seen.add(key)
+          await tx.objectStore(OUTBOX).add({ entity: c.entity, id: row.id, row, at })
+          n++
+        }
+        await cursor.delete()
+      }
+      cursor = await cursor.continue()
+    }
+    await tx.done
+    if (n) this.emit(null)
+    return n
+  }
+
   async getMeta<T>(key: string): Promise<T | undefined> {
     return this.db.get(META, key)
   }

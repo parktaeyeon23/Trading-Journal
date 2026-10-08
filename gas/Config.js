@@ -91,7 +91,7 @@ var ENTITIES = {
     sort: { type: 'int' },
   },
   Tags: {
-    family: { type: 'enum', values: ['setup', 'mistake', 'emotion', 'regime'], required: true },
+    family: { type: 'enum', values: ['setup', 'mistake', 'emotion', 'regime', 'reason'], required: true },
     name: { type: 'string', required: true },
     color: { type: 'string' },
   },

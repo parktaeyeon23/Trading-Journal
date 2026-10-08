@@ -168,10 +168,23 @@ export function SettingsScreen() {
           <h2 id="conflict-title" className="section-title">
             충돌·거부 기록
           </h2>
-          {conflicts.length > 0 && (
+          {conflicts.some((c) => c.kind === 'rejected') && (
             <button
               type="button"
               className="btn btn-secondary push-right"
+              onClick={async () => {
+                await repo?.resendRejected()
+                setConflicts(conflicts.filter((c) => c.kind !== 'rejected'))
+                void engine?.syncNow()
+              }}
+            >
+              거부된 행 다시 보내기
+            </button>
+          )}
+          {conflicts.length > 0 && (
+            <button
+              type="button"
+              className={`btn btn-secondary${conflicts.some((c) => c.kind === 'rejected') ? '' : ' push-right'}`}
               onClick={async () => {
                 await repo?.clearConflicts()
                 setConflicts([])

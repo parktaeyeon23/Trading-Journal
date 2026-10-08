@@ -104,6 +104,11 @@ export class GasAdapter implements BackendAdapter {
     return { symbol: r.symbol, cacheSymbol: r.cacheSymbol, name: r.name, currency: r.currency, price: r.price, asOf: r.asOf, bars: r.bars }
   }
 
+  async getBars(symbol: string, market: 'KR' | 'US', from: string, to: string) {
+    const r = await this.call<{ cacheSymbol: string; count: number }>('getBars', { symbol, market, from, to })
+    return { cacheSymbol: r.cacheSymbol, count: r.count }
+  }
+
   async uploadImage(req: UploadImageRequest): Promise<BaseRow> {
     const r = await this.call<{ row: BaseRow }>('uploadImage', { ...req })
     return r.row
