@@ -199,7 +199,6 @@ export function CalendarScreen() {
         type="button"
         className="summary-bar"
         onClick={() => navigate('analysis', view === 'year' ? String(y) : mm)}
-        aria-label={`${title} 요약 — 분석에서 보기`}
       >
         <span className="stat">
           <span className="field-label">실현손익</span>

@@ -132,19 +132,22 @@ export class LocalRepo {
     const stores = [...ENTITY_ORDER, OUTBOX]
     const tx = this.db.transaction(stores, 'readwrite')
     const at = this.now().toISOString()
-    await tx.objectStore(OUTBOX).clear()
+    const outbox = tx.objectStore(OUTBOX)
+    // Requests are queued without awaiting each one: IndexedDB runs them in
+    // order inside the transaction, and one round trip per row made a large
+    // restore take minutes. Any failure still aborts the whole transaction.
+    const requests: Promise<unknown>[] = [outbox.clear()]
     let n = 0
     for (const e of ENTITY_ORDER) {
       const store = tx.objectStore(e)
-      await store.clear()
+      requests.push(store.clear())
       for (const row of data[e] ?? []) {
         const r = clean(row)
-        await store.put(r)
-        await tx.objectStore(OUTBOX).add({ entity: e, id: r.id, row: r, at })
+        requests.push(store.put(r), outbox.add({ entity: e, id: r.id, row: r, at }))
         n++
       }
     }
-    await tx.done
+    await Promise.all([...requests, tx.done])
     this.emit(null)
     return n
   }

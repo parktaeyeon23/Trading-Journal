@@ -12,7 +12,8 @@
   --text: #14201b;
   --text-secondary: #5b6b64;
   --text-nav: #3f4d47;
-  --text-faint: #8a9993;
+  /* 4.5:1 on surface and surface-muted (WCAG AA for small text). */
+  --text-faint: #62716b;
 
   --brand: #0b7d3e;
   --brand-hover: #075a2c;
@@ -43,6 +44,7 @@
   --font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
+  --shadow-lg: 0 8px 24px rgba(20, 32, 27, 0.16);
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;

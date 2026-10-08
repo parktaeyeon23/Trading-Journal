@@ -1492,7 +1492,7 @@ input[type="checkbox"] {
 }
 .day-cell.out {
   background: var(--surface-muted);
-  color: var(--text-faint);
+  color: var(--text-secondary);
   border-color: var(--divider);
 }
 .day-cell.selected {
@@ -2138,5 +2138,33 @@ input[type="checkbox"] {
 @media (max-width: 600px) {
   .histo-pair {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Update banner ---------- */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: min(560px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--brand-tint-border);
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+}
+.update-banner span {
+  flex: 1 1 220px;
+}
+@media (min-width: 900px) {
+  .update-banner {
+    bottom: 20px;
   }
 }

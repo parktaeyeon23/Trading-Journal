@@ -24,14 +24,14 @@ export function MonthGrid(p: MonthGridProps) {
   const cols = p.showWeekends ? 7 : 5
   const style = { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr)) minmax(0, 1.1fr)` }
   return (
-    <div className="month-grid" role="grid" aria-label="월 캘린더">
-      <div className="month-row month-head" role="row" style={style}>
+    <div className="month-grid" aria-label="월 캘린더">
+      <div className="month-row month-head" style={style}>
         {WEEKDAYS.slice(0, cols).map((d) => (
-          <div key={d} role="columnheader" className="month-dow">
+          <div key={d} className="month-dow">
             {d}
           </div>
         ))}
-        <div role="columnheader" className="month-dow month-dow-week">
+        <div className="month-dow month-dow-week">
           주간 합계
         </div>
       </div>
@@ -39,7 +39,7 @@ export function MonthGrid(p: MonthGridProps) {
         const days = week.slice(0, cols)
         const sum = sumDays(p.buckets, week.map((d) => d.date))
         return (
-          <div key={week[0].date} className="month-row" role="row" style={style}>
+          <div key={week[0].date} className="month-row" style={style}>
             {days.map((d) => {
               const b = p.buckets.get(d.date)
               const has = !!b && b.trades > 0
@@ -48,7 +48,6 @@ export function MonthGrid(p: MonthGridProps) {
                 <button
                   key={d.date}
                   type="button"
-                  role="gridcell"
                   className={classes.filter(Boolean).join(' ')}
                   style={has && d.inMonth ? heatStyle(b.value, p.maxAbs) : undefined}
                   onClick={() => p.onSelect(d.date)}
@@ -79,7 +78,7 @@ export function MonthGrid(p: MonthGridProps) {
                 </button>
               )
             })}
-            <button type="button" role="gridcell" className="week-cell" onClick={() => p.onWeek(week[0].date)} aria-label={`${md(week[0].date)} 주 주간 리뷰`}>
+            <button type="button" className="week-cell" onClick={() => p.onWeek(week[0].date)} aria-label={`${md(week[0].date)} 주 주간 리뷰`}>
               <span className="week-label">
                 {md(week[0].date)} – {md(week[cols - 1].date)}
               </span>
