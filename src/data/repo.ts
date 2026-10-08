@@ -1,7 +1,7 @@
 import type { RowError } from './backend'
 import { CONFLICTS, META, OUTBOX, type AppDb } from './db'
 import { shouldApplyServerRow, type OutboxEntry } from './syncPlan'
-import type { BaseRow, EntityMap, EntityName } from './types'
+import { ENTITY_ORDER, type BaseRow, type EntityMap, type EntityName } from './types'
 
 /** What a caller passes to put(): any subset of fields, id optional for new rows. */
 export type RowInput<E extends EntityName> = Partial<Omit<EntityMap[E], 'created_at' | 'updated_at'>> & { id?: string }
@@ -111,6 +111,42 @@ export class LocalRepo {
     const existing = await this.get(entity, id)
     if (!existing || existing.deleted) return
     await this.put(entity, { id, deleted: true } as RowInput<typeof entity>)
+  }
+
+  // ---------- export / restore ----------
+
+  /** Every row of every entity, deleted ones included. */
+  async exportAll(): Promise<Partial<Record<EntityName, BaseRow[]>>> {
+    const out: Partial<Record<EntityName, BaseRow[]>> = {}
+    for (const e of ENTITY_ORDER) out[e] = (await this.db.getAll(e)) as BaseRow[]
+    return out
+  }
+
+  /**
+   * Replaces all local data with a dump in one transaction and queues every
+   * row for upload. Unsent local changes are dropped (the caller confirms
+   * this with the user first). Rows keep their own updated_at, so the server
+   * keeps any version newer than the file and reports it as a conflict.
+   */
+  async importAll(data: Partial<Record<EntityName, BaseRow[]>>): Promise<number> {
+    const stores = [...ENTITY_ORDER, OUTBOX]
+    const tx = this.db.transaction(stores, 'readwrite')
+    const at = this.now().toISOString()
+    await tx.objectStore(OUTBOX).clear()
+    let n = 0
+    for (const e of ENTITY_ORDER) {
+      const store = tx.objectStore(e)
+      await store.clear()
+      for (const row of data[e] ?? []) {
+        const r = clean(row)
+        await store.put(r)
+        await tx.objectStore(OUTBOX).add({ entity: e, id: r.id, row: r, at })
+        n++
+      }
+    }
+    await tx.done
+    this.emit(null)
+    return n
   }
 
   // ---------- sync support ----------

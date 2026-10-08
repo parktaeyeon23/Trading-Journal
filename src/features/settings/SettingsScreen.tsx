@@ -3,6 +3,7 @@ import { BackendError } from '../../data/backend'
 import { makeAdapter, useData } from '../../data/dataStore'
 import type { ConflictRecord } from '../../data/repo'
 import { formatClock, syncLabel } from '../../ui/syncText'
+import { BackupCard } from './BackupCard'
 
 type TestState = { kind: 'idle' } | { kind: 'testing' } | { kind: 'ok'; message: string } | { kind: 'fail'; message: string }
 
@@ -151,6 +152,8 @@ export function SettingsScreen() {
         </div>
         <p className="help">변경은 저장 1.5초 뒤, 온라인으로 돌아올 때, 그리고 5분마다 자동으로 동기화됩니다.</p>
       </section>
+
+      <BackupCard />
 
       <section className="card stack" aria-labelledby="conflict-title">
         <div className="row">

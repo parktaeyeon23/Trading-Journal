@@ -107,22 +107,47 @@ class FakeSpreadsheet {
   }
 }
 
+export interface FakeFile {
+  id: string
+  name: string
+  created: Date
+  trashed: boolean
+}
+
 export interface FakeGas {
   context: vm.Context
   spreadsheets: Map<string, FakeSpreadsheet>
   props: Map<string, string>
+  /** Files copied by makeCopy, newest last. */
+  files: FakeFile[]
+  triggers: { handler: string; hour: number }[]
+  /** Overrides "now" for files created by makeCopy. */
+  setNow(d: Date): void
   /** Calls a global function defined by the /gas files. */
   call<T = any>(fn: string, ...args: unknown[]): T
 }
 
-const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Tests.js']
+const GAS_FILES = ['Config.js', 'Validate.js', 'Merge.js', 'Sheets.js', 'Api.js', 'Setup.js', 'Backup.js', 'Tests.js']
 
 export function loadGas(): FakeGas {
   const spreadsheets = new Map<string, FakeSpreadsheet>()
   const props = new Map<string, string>()
+  const files: FakeFile[] = []
+  const triggers: { handler: string; hour: number }[] = []
+  let now = () => new Date()
+  const asDriveFile = (f: FakeFile) => ({
+    getId: () => f.id,
+    getName: () => f.name,
+    getDateCreated: () => f.created,
+    setTrashed: (v: boolean) => {
+      f.trashed = v
+    },
+  })
   const folder = () => {
     const children = new Map<string, unknown>()
+    const own: FakeFile[] = []
     const f: any = {
+      own,
       getFoldersByName: (name: string) => {
         const hit = children.get(name)
         return { hasNext: () => !!hit, next: () => hit }
@@ -131,6 +156,11 @@ export function loadGas(): FakeGas {
         const c = folder()
         children.set(name, c)
         return c
+      },
+      getFiles: () => {
+        const list = own.filter((x) => !x.trashed)
+        let i = 0
+        return { hasNext: () => i < list.length, next: () => asDriveFile(list[i++]) }
       },
     }
     return f
@@ -168,11 +198,36 @@ export function loadGas(): FakeGas {
     },
     DriveApp: {
       getRootFolder: () => root,
-      getFileById: (id: string) => ({
+      getFileById: (_id: string) => ({
         moveTo: () => {},
         setTrashed: () => {},
-        makeCopy: (name: string) => ({ getName: () => name, getId: () => id + '-copy' }),
+        makeCopy: (name: string, into: any) => {
+          const file: FakeFile = { id: randomUUID(), name, created: now(), trashed: false }
+          files.push(file)
+          into?.own?.push(file)
+          return asDriveFile(file)
+        },
       }),
+    },
+    ScriptApp: {
+      getProjectTriggers: () =>
+        triggers.map((t) => ({ getHandlerFunction: () => t.handler, _t: t })),
+      deleteTrigger: (t: any) => {
+        triggers.splice(triggers.indexOf(t._t), 1)
+      },
+      newTrigger: (handler: string) => {
+        let hour = -1
+        const b: any = {
+          timeBased: () => b,
+          everyDays: () => b,
+          atHour: (h: number) => {
+            hour = h
+            return b
+          },
+          create: () => triggers.push({ handler, hour }),
+        }
+        return b
+      },
     },
     Logger: { log: () => {} },
   }
@@ -186,6 +241,11 @@ export function loadGas(): FakeGas {
     context,
     spreadsheets,
     props,
+    files,
+    triggers,
+    setNow: (d) => {
+      now = () => d
+    },
     call: (fn, ...args) => {
       const target = (context as any)[fn]
       if (typeof target !== 'function') throw new Error('No gas function ' + fn)

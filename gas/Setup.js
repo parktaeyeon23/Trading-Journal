@@ -62,10 +62,10 @@ function setupSheets() {
   return summary
 }
 
-/** Copies the database spreadsheet into ALPHA JOURNAL/backup. Scheduled in Step 3. */
+/** Copies the database spreadsheet into ALPHA JOURNAL/backup. Runs daily via backupDaily(). */
 function backupSpreadsheet() {
   var ss = getSpreadsheet_()
-  var folder = getOrCreateFolderPath_([ROOT_FOLDER, 'backup'])
+  var folder = getOrCreateFolderPath_([ROOT_FOLDER, BACKUP_FOLDER])
   var stamp = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HHmm')
   var copy = DriveApp.getFileById(ss.getId()).makeCopy(DB_TITLE + ' backup ' + stamp, folder)
   Logger.log('Backup: ' + copy.getName())
