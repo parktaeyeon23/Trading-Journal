@@ -4,6 +4,7 @@ import {
   type BackendErrorCode,
   type PullResult,
   type QuoteResult,
+  type QuoteMarket,
   type UploadImageRequest,
   type UpsertOp,
   type UpsertResult,
@@ -98,7 +99,7 @@ export class GasAdapter implements BackendAdapter {
     return r.results
   }
 
-  async getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult> {
+  async getQuote(symbol: string, market: QuoteMarket): Promise<QuoteResult> {
     const r = await this.call<QuoteResult>('getQuote', { symbol, market })
     return { symbol: r.symbol, cacheSymbol: r.cacheSymbol, name: r.name, currency: r.currency, price: r.price, asOf: r.asOf, bars: r.bars }
   }

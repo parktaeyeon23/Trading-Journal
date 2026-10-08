@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney, formatPct, formatPrice, formatR, parseAmount, pnlTone } from '../../src/core/format'
+import { formatCompact, formatMoney, formatPct, formatPrice, formatR, formatSignedPct, formatUnit, parseAmount, pnlTone } from '../../src/core/format'
 
 describe('formatR', () => {
   it('signs positive and negative values', () => {
@@ -60,5 +60,36 @@ describe('pnlTone', () => {
     expect(pnlTone(1)).toBe('profit')
     expect(pnlTone(-1)).toBe('loss')
     expect(pnlTone(0)).toBe('flat')
+  })
+})
+
+describe('calendar formats', () => {
+  it('shortens KRW to 만/억 and USD to K/M', () => {
+    expect(formatCompact(523_000, 'KRW')).toBe('+52.3만')
+    expect(formatCompact(-1_240_000, 'KRW')).toBe('−124만')
+    expect(formatCompact(-124_000_000, 'KRW')).toBe('−1.24억')
+    expect(formatCompact(9_800, 'KRW')).toBe('+₩9,800')
+    expect(formatCompact(1_250, 'USD')).toBe('+$1.3K')
+    expect(formatCompact(-2_500_000, 'USD')).toBe('−$2.5M')
+    expect(formatCompact(-84.6, 'USD')).toBe('−$85')
+    expect(formatCompact(0.2, 'USD')).toBe('$0')
+    expect(formatCompact(1.26, 'R')).toBe('+1.3R')
+    expect(formatCompact(-0.42, 'PCT')).toBe('−0.4%')
+  })
+  it('has a shorter form for phone-width cells', () => {
+    expect(formatCompact(-185_000, 'KRW', true)).toBe('−19만')
+    expect(formatCompact(4_183_000, 'KRW', true)).toBe('+418만')
+    expect(formatCompact(-124_000_000, 'KRW', true)).toBe('−1.2억')
+    expect(formatCompact(3_000, 'KRW', true)).toBe('+0.3만')
+    expect(formatCompact(12_345, 'USD', true)).toBe('+$12K')
+    expect(formatCompact(1_250, 'USD', true)).toBe('+$1.3K')
+    expect(formatCompact(2_540_000, 'USD', true)).toBe('+$2.5M')
+  })
+  it('prints full values with signs', () => {
+    expect(formatUnit(1.256, 'R')).toBe('+1.26R')
+    expect(formatUnit(-0.4, 'PCT')).toBe('−0.40%')
+    expect(formatUnit(0, 'PCT')).toBe('0.00%')
+    expect(formatUnit(1500, 'KRW')).toBe('+₩1,500')
+    expect(formatSignedPct(2.5, 1)).toBe('+2.5%')
   })
 })

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "seed": "node scripts/seed.ts"
   },
   "dependencies": {
     "idb": "^8.0.4",

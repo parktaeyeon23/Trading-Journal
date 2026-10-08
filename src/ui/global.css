@@ -1351,3 +1351,593 @@ textarea {
 input[type="checkbox"] {
   accent-color: var(--brand);
 }
+
+/* ---------- Calendar ---------- */
+.block {
+  display: block;
+}
+.icon-btn.bordered {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 18px;
+  cursor: pointer;
+}
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch);
+  min-height: 32px;
+  color: var(--text-secondary);
+}
+.cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.cal-title {
+  margin: 0;
+  min-width: 120px;
+  text-align: center;
+  font-size: 22px;
+}
+.cal-more summary {
+  cursor: pointer;
+  min-height: var(--touch);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.cal-more[open] summary {
+  margin-bottom: 8px;
+}
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-bar .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+}
+.summary-bar:hover .stat {
+  border-color: var(--border-strong);
+}
+.stat-v {
+  font-size: 19px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-days {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.summary-link {
+  align-self: center;
+  font-size: 13px;
+  color: var(--brand);
+  padding: 0 4px;
+}
+.cal-main {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+.cal-main.with-aside {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.cal-body {
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cal-aside {
+  position: sticky;
+  top: 16px;
+}
+.month-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.month-row {
+  display: grid;
+  gap: 6px;
+}
+.month-dow {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 4px;
+}
+.month-dow-week {
+  color: var(--brand);
+}
+.day-cell,
+.week-cell {
+  min-height: 92px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  min-width: 0;
+}
+.day-cell.out {
+  background: var(--surface-muted);
+  color: var(--text-faint);
+  border-color: var(--divider);
+}
+.day-cell.selected {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+.day-cell.hl {
+  box-shadow: 0 0 0 2px var(--brand-tint-border);
+}
+.day-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.day-num {
+  font-weight: 600;
+  font-size: 13px;
+}
+.day-num.today,
+.today-text {
+  background: var(--brand);
+  color: var(--on-brand);
+  border-radius: 10px;
+  padding: 0 7px;
+}
+.day-note {
+  opacity: 0.75;
+}
+.day-count {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.85;
+}
+.day-val {
+  margin-top: auto;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.day-r {
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+.day-dots {
+  display: flex;
+  gap: 3px;
+  min-height: 6px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+.dot.win {
+  background: currentColor;
+}
+.week-cell {
+  background: var(--surface-muted);
+  border-style: dashed;
+  border-color: var(--border-strong);
+}
+.week-label {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.week-val {
+  margin-top: auto;
+  font-size: 15px;
+  font-weight: 600;
+}
+.week-link {
+  font-size: 11px;
+  color: var(--brand);
+}
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.cal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.profit-bg {
+  background: color-mix(in srgb, var(--profit) 55%, var(--surface));
+}
+.loss-bg {
+  background: color-mix(in srgb, var(--loss) 55%, var(--surface));
+}
+
+/* Day detail */
+.day-detail .section-title {
+  margin: 0;
+}
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.index-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  font-size: 12px;
+}
+.day-trade {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  min-height: var(--touch);
+}
+.day-trade:hover {
+  border-color: var(--border-strong);
+}
+.day-thumb {
+  width: 64px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.day-thumb img,
+.week-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.day-trade-main {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+.day-trade-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.day-note-box {
+  border-top: 1px solid var(--divider);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.day-note-box .para {
+  margin: 0;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+/* Week view */
+.day-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: var(--touch);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.week-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.week-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+.week-card-img {
+  aspect-ratio: 16 / 9;
+  background: var(--surface-sunken);
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.week-card-meta {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 14px;
+}
+
+/* Year view */
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.year-month {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.year-month:hover {
+  border-color: var(--border-strong);
+}
+.mini-heat {
+  display: grid;
+  gap: 3px;
+  height: 70px;
+}
+.mini-cell {
+  border-radius: 2px;
+  background: var(--surface-sunken);
+}
+.mini-cell.out {
+  background: transparent;
+}
+
+/* Equity curve */
+.equity-wrap {
+  position: relative;
+}
+.equity-wrap svg {
+  display: block;
+  touch-action: pan-y;
+}
+.eq-zero {
+  stroke: var(--border);
+}
+.eq-area {
+  fill: var(--surface-sunken);
+}
+.eq-line {
+  fill: none;
+  stroke: var(--text-nav);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.eq-dd {
+  fill: var(--loss-tint);
+  stroke: var(--loss);
+  stroke-width: 1;
+}
+.eq-cursor {
+  stroke: var(--border-strong);
+  stroke-dasharray: 3 3;
+}
+.eq-dot {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.eq-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (max-width: 899px) {
+  .summary-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-link {
+    display: none;
+  }
+  .cal-title {
+    font-size: 18px;
+    min-width: 96px;
+  }
+}
+@media (max-width: 600px) {
+  .day-cell,
+  .week-cell {
+    min-height: 64px;
+    padding: 5px;
+    border-radius: 8px;
+  }
+  .day-r,
+  .day-count,
+  .day-note,
+  .week-link,
+  .week-label {
+    display: none;
+  }
+  .day-val,
+  .week-val {
+    font-size: 11px;
+  }
+  .day-num {
+    font-size: 12px;
+  }
+  .month-grid,
+  .month-row {
+    gap: 4px;
+  }
+  .month-dow {
+    font-size: 11px;
+    padding-left: 2px;
+  }
+  .summary-bar .stat {
+    padding: 10px 12px;
+  }
+  .stat-v {
+    font-size: 16px;
+  }
+}
+.week-day {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.week-day:last-of-type {
+  border-bottom: 0;
+}
+@media (max-width: 899px) {
+  .summary-bar .stat:nth-child(5) {
+    grid-column: span 2;
+  }
+}
+.badges {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+.badges .badge-alert {
+  margin-left: 0;
+}
+.badge-warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+.chip-warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+.tab-dot.warn {
+  background: var(--warn-text);
+}
+
+/* ---------- Notes ---------- */
+.dont-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--alert-text);
+}
+.note-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--divider);
+  color: inherit;
+  text-decoration: none;
+  flex-wrap: wrap;
+}
+.note-row:last-of-type {
+  border-bottom: 0;
+}
+.note-row b {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.note-date {
+  flex: none;
+  font-size: 14px;
+}
+.note-snippet {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-done {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+.mistake-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+@media (max-width: 600px) {
+  .day-val,
+  .week-val {
+    font-size: 10.5px;
+    letter-spacing: -0.4px;
+    text-overflow: clip;
+  }
+  .day-cell,
+  .week-cell {
+    padding: 5px 3px;
+  }
+}

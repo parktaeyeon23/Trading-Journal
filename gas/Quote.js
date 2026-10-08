@@ -2,7 +2,8 @@
  * Daily quotes for the calculator. The data source lives behind one function,
  * fetchDailyBars_(), so swapping Yahoo for another source touches nothing else.
  *
- * Request:  { action: "getQuote", symbol: "042700" | "CRDO", market: "KR" | "US" }
+ * Request:  { action: "getQuote", symbol: "042700" | "CRDO" | "KOSPI", market: "KR" | "US" | "IDX" }
+ *   IDX = index or FX series from MARKET_SERIES (KOSPI, KOSDAQ, SPX, NASDAQ, USDKRW).
  * Response: { ok, symbol, name, currency, price, asOf, bars: [{date, open, high, low, close}] }
  * Bars (last ~3 months) are also written to MarketCache so every device gets them by sync.
  */
@@ -10,15 +11,21 @@
 var QUOTE_RANGE = '3mo'
 var QUOTE_MAX_BARS = 70
 
-function getQuote_(symbol, market) {
+/** Index and FX series the calendar uses. Key = app name (cached as IDX:<key>), value = Yahoo symbol. */
+var MARKET_SERIES = { KOSPI: '^KS11', KOSDAQ: '^KQ11', SPX: '^GSPC', NASDAQ: '^IXIC', USDKRW: 'KRW=X' }
+var QUOTE_MARKETS = ['KR', 'US', 'IDX']
+var SERIES_HOUR = 7
+var SERIES_MINUTE = 30
+
+function getQuote_(symbol, market, range) {
   if (typeof symbol !== 'string' || !symbol.trim()) throw apiError_('bad_request', 'symbol is required.')
-  if (MARKETS.indexOf(market) < 0) throw apiError_('bad_request', 'market must be KR or US.')
+  if (QUOTE_MARKETS.indexOf(market) < 0) throw apiError_('bad_request', 'market must be KR, US or IDX.')
   var candidates = yahooSymbols_(symbol.trim().toUpperCase(), market)
   var data = null
-  for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i])
+  for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i], range || QUOTE_RANGE)
   if (!data) throw apiError_('quote_not_found', '시세를 찾지 못했습니다: ' + symbol + (market === 'KR' ? ' (KR은 6자리 종목코드로 입력)' : ''))
 
-  var bars = data.bars.slice(-QUOTE_MAX_BARS)
+  var bars = range ? data.bars : data.bars.slice(-QUOTE_MAX_BARS)
   var cacheSymbol = market + ':' + symbol.trim().toUpperCase()
   withLock_(function () {
     cacheBars_(cacheSymbol, bars)
@@ -38,6 +45,7 @@ function getQuote_(symbol, market) {
 
 /** KR codes are tried on KOSPI (.KS) first, then KOSDAQ (.KQ). */
 function yahooSymbols_(symbol, market) {
+  if (market === 'IDX') return MARKET_SERIES[symbol] ? [MARKET_SERIES[symbol]] : []
   if (market === 'US') return [symbol]
   if (/\.(KS|KQ)$/.test(symbol)) return [symbol]
   if (!/^[0-9A-Z]{6}$/.test(symbol)) return []
@@ -49,8 +57,8 @@ function yahooSymbols_(symbol, market) {
  * @return {{symbol, name, currency, price, bars: Array<{date, open, high, low, close}>} | null}
  *   null when the source has no such symbol; throws quote_failed when the source is unreachable.
  */
-function fetchDailyBars_(yahooSymbol) {
-  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?range=' + QUOTE_RANGE + '&interval=1d'
+function fetchDailyBars_(yahooSymbol, range) {
+  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?range=' + (range || QUOTE_RANGE) + '&interval=1d'
   var res
   try {
     res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } })
@@ -138,4 +146,39 @@ function cacheBars_(cacheSymbol, bars) {
     }
   })
   applyPlan_(table, plan)
+}
+
+/**
+ * Trigger target: refreshes every MARKET_SERIES entry into MarketCache, so the
+ * calendar has index moves and USD/KRW even on days the app was not opened.
+ * One failing series does not stop the others.
+ * @param {string=} range Yahoo range, e.g. '1y' for the first fill.
+ */
+function refreshMarketSeries(range) {
+  var done = []
+  var failed = []
+  Object.keys(MARKET_SERIES).forEach(function (key) {
+    try {
+      getQuote_(key, 'IDX', typeof range === 'string' ? range : '1mo')
+      done.push(key)
+    } catch (e) {
+      failed.push(key + ': ' + (e && e.message))
+    }
+  })
+  Logger.log('시장 시세 갱신: ' + done.join(', ') + (failed.length ? ' / 실패: ' + failed.join('; ') : ''))
+  return { done: done, failed: failed }
+}
+
+/**
+ * Run once from the editor. Fills the last year of index/FX bars now, then
+ * refreshes them every morning around 07:30 Asia/Seoul (after the US close).
+ * Safe to run again: there is always exactly one such trigger.
+ */
+function installMarketTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'refreshMarketSeries') ScriptApp.deleteTrigger(t)
+  })
+  ScriptApp.newTrigger('refreshMarketSeries').timeBased().everyDays(1).atHour(SERIES_HOUR).nearMinute(SERIES_MINUTE).create()
+  refreshMarketSeries('1y')
+  Logger.log('매일 ' + SERIES_HOUR + '시 ' + SERIES_MINUTE + '분 무렵 지수·환율 갱신이 예약됐습니다.')
 }

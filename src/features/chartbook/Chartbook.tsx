@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { postChartDue } from '../../core/charts'
-import { entrySide } from '../../core/pnl'
 import { addTradingViewChart, ChartLinkError, nextFreeSort } from '../../data/charts'
 import { useData } from '../../data/dataStore'
 import { newId } from '../../data/repo'
@@ -10,10 +8,10 @@ import { useRepoQuery } from '../../ui/useRepoQuery'
 import { FIXED_SLOTS, itemsFromTrade, MAX_FREE, objectUrlsFor, releaseObjectUrls, slotLabel, type ChartItem } from './chartItems'
 import { FallbackImg } from './FallbackImg'
 import { prepareImage } from './image'
+import { postChartDays } from './postChart'
+import { todayKst } from '../calendar/calText'
 import { Viewer } from './Viewer'
 
-const localDay = (iso: string) => new Date(iso).toLocaleDateString('sv-SE')
-const today = () => new Date().toLocaleDateString('sv-SE')
 
 function imageFiles(list: FileList | DataTransferItemList | null | undefined): File[] {
   if (!list) return []
@@ -149,9 +147,7 @@ export function Chartbook({ trade }: { trade: TradeBundle }) {
     }
   }
 
-  const exitFills = trade.fills.filter((f) => f.side !== entrySide(trade.position.direction))
-  const exitDay = closed && exitFills.length ? localDay(exitFills[exitFills.length - 1].ts) : null
-  const postDue = postChartDue(exitDay, today(), bySlot('post').length > 0)
+  const postDue = postChartDays(trade, todayKst(), pending.filter((p) => p.slot === 'post').length)
   const waiting = pending.filter((p) => p.state === 'waiting').length
   const failed = pending.filter((p) => p.state === 'failed').length
 

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { formatPrice } from '../../core/format'
 import { loadAllTrades, type TradeBundle } from '../../data/trades'
 import { Gallery } from '../chartbook/Gallery'
+import { postChartDays } from '../chartbook/postChart'
+import { todayKst } from '../calendar/calText'
 import type { PositionStatus } from '../../data/types'
 import { GradeBadge, PnlText } from '../../ui/TradeBits'
 import { hrefFor } from '../../ui/routes'
@@ -130,6 +132,7 @@ function TradeCard({ t }: { t: TradeBundle }) {
   const checklist = (t.review?.checklist ?? null) as Record<string, boolean> | null
   const rules = checklist ? Object.values(checklist) : null
   const last = t.fills.at(-1)
+  const postDays = postChartDays(t, todayKst())
 
   return (
     <a className="trade-card" href={hrefFor('trades', p.id)}>
@@ -141,6 +144,7 @@ function TradeCard({ t }: { t: TradeBundle }) {
             {p.setup ? ` · ${p.setup}` : ''}
           </span>
           {p.no_plan && <span className="chip chip-bad">무계획</span>}
+          {postDays !== null && <span className="chip chip-warn">사후 차트 필요</span>}
         </div>
         <div className="small faint">
           {p.status === 'planned' && t.plan

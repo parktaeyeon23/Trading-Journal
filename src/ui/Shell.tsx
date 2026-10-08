@@ -7,10 +7,12 @@ interface ShellProps {
   current: RouteId
   /** Count of closed positions waiting for review — shown on the 트레이드 tab. */
   reviewPending: number
+  /** Closed trades past 10 trading days without a ④ post-trade chart. */
+  postDue: number
   children: ReactNode
 }
 
-export function Shell({ current, reviewPending, children }: ShellProps) {
+export function Shell({ current, reviewPending, postDue, children }: ShellProps) {
   return (
     <div className="shell">
       <nav className="sidebar" aria-label="주 메뉴">
@@ -24,7 +26,16 @@ export function Shell({ current, reviewPending, children }: ShellProps) {
           <a key={id} className="nav-item" href={hrefFor(id)} aria-current={id === current ? 'page' : undefined}>
             <Icon />
             {label}
-            {id === 'trades' && reviewPending > 0 && <span className="badge-alert">복기 {reviewPending}</span>}
+            {id === 'trades' && (reviewPending > 0 || postDue > 0) && (
+              <span className="badges">
+                {reviewPending > 0 && <span className="badge-alert">복기 {reviewPending}</span>}
+                {postDue > 0 && (
+                  <span className="badge-warn" title="청산 후 10거래일이 지나 사후 복기 차트가 필요한 트레이드">
+                    사후 {postDue}
+                  </span>
+                )}
+              </span>
+            )}
           </a>
         ))}
         <div className="sidebar-foot">
@@ -58,6 +69,11 @@ export function Shell({ current, reviewPending, children }: ShellProps) {
             {id === 'trades' && reviewPending > 0 && (
               <span className="tab-dot" aria-label={`복기 대기 ${reviewPending}건`}>
                 {reviewPending}
+              </span>
+            )}
+            {id === 'trades' && reviewPending === 0 && postDue > 0 && (
+              <span className="tab-dot warn" aria-label={`사후 차트 필요 ${postDue}건`}>
+                {postDue}
               </span>
             )}
           </a>

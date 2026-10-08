@@ -56,3 +56,15 @@ export const NotesIcon = (p: IconProps) => (
     <path d="M9 12h7M9 16h5" />
   </svg>
 )
+
+export const PencilIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+  </svg>
+)
+
+export const ChartIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 17l5-6 4 4 5-7 4 5" />
+  </svg>
+)

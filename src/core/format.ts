@@ -57,3 +57,36 @@ export function pnlTone(n: number): PnlTone {
   if (n < 0) return 'loss'
   return 'flat'
 }
+
+/** Signed percent for P&L: +0.42% / −1.10%. */
+export function formatSignedPct(n: number, digits = 2): string {
+  const abs = Math.abs(n).toFixed(digits)
+  return `${Number(abs) === 0 ? '' : sign(n)}${abs}%`
+}
+
+/**
+ * Short form for calendar cells. KRW in 만/억 (+52.3만, −1.24억), USD in K/M
+ * (+$1.2K), R and % with one decimal. Full numbers below 10,000 won / $1,000.
+ */
+export function formatCompact(value: number, unit: Currency | 'R' | 'PCT', short = false): string {
+  if (unit === 'R') return formatR(value)
+  if (unit === 'PCT') return formatSignedPct(value, 1)
+  const abs = Math.abs(value)
+  const trim = (n: number, d: number) => String(Number(n.toFixed(d)))
+  if (unit === 'KRW') {
+    // short: phone-width cells — whole 만, one decimal 억, no ₩ below 만.
+    if (abs >= 1e8) return `${sign(value)}${trim(abs / 1e8, short ? 1 : 2)}억`
+    if (abs >= 1e4) return `${sign(value)}${trim(abs / 1e4, short || abs >= 1e6 ? 0 : 1)}만`
+    return short ? `${sign(value)}${trim(abs / 1e4, 1)}만` : formatMoney(value, 'KRW')
+  }
+  if (abs >= 1e6) return `${sign(value)}$${trim(abs / 1e6, short ? 1 : 2)}M`
+  if (abs >= 1e3) return `${sign(value)}$${trim(abs / 1e3, short && abs >= 1e4 ? 0 : 1)}K`
+  return Math.round(abs) === 0 ? '$0' : `${sign(value)}$${Math.round(abs)}`
+}
+
+/** Full form in the calendar's unit. */
+export function formatUnit(value: number, unit: Currency | 'R' | 'PCT'): string {
+  if (unit === 'R') return formatR(value, 2)
+  if (unit === 'PCT') return formatSignedPct(value, 2)
+  return formatMoney(value, unit)
+}

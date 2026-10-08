@@ -37,6 +37,9 @@ export interface QuoteBar {
   close: number | null
 }
 
+/** IDX = index/FX series: KOSPI, KOSDAQ, SPX, NASDAQ, USDKRW (cached as IDX:<key>). */
+export type QuoteMarket = 'KR' | 'US' | 'IDX'
+
 export interface QuoteResult {
   /** Source symbol, e.g. 042700.KQ. */
   symbol: string
@@ -75,7 +78,7 @@ export interface BackendAdapter {
   batch(ops: UpsertOp[]): Promise<UpsertResult[]>
   getSettings(): Promise<Record<string, unknown>>
   /** Live daily quote; also caches the bars server-side (they arrive in MarketCache by sync). */
-  getQuote(symbol: string, market: 'KR' | 'US'): Promise<QuoteResult>
+  getQuote(symbol: string, market: QuoteMarket): Promise<QuoteResult>
   /** Stores a chart image (idempotent by id) and returns the saved ChartImages row. */
   uploadImage(req: UploadImageRequest): Promise<BaseRow>
 }

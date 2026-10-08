@@ -24,6 +24,10 @@
   --loss: #1d4ed8;
   --profit-tint: rgba(200, 16, 46, 0.12);
   --loss-tint: rgba(29, 78, 216, 0.12);
+  /* Text on light / strong P&L heat cells (calendar). */
+  --profit-strong: #8f0b20;
+  --loss-strong: #163a9e;
+  --on-pnl: #ffffff;
 
   --warn-bg: #fff7e6;
   --warn-border: #f2d9a6;
@@ -67,4 +71,7 @@
   --on-brand: #0b1a12;
   --profit: #ff5c6c;
   --loss: #6b9bff;
+  --profit-strong: #ffb3bb;
+  --loss-strong: #c2d4ff;
+  --on-pnl: #0f1513;
 }

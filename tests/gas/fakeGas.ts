@@ -125,7 +125,7 @@ export interface FakeGas {
   props: Map<string, string>
   /** Files copied by makeCopy, newest last. */
   files: FakeFile[]
-  triggers: { handler: string; hour: number }[]
+  triggers: { handler: string; hour: number; minute?: number }[]
   http: FakeHttp
   /** Overrides "now" for files created by makeCopy. */
   setNow(d: Date): void
@@ -146,7 +146,7 @@ export function loadGas(): FakeGas {
   const spreadsheets = new Map<string, FakeSpreadsheet>()
   const props = new Map<string, string>()
   const files: FakeFile[] = []
-  const triggers: { handler: string; hour: number }[] = []
+  const triggers: { handler: string; hour: number; minute?: number }[] = []
   const http: FakeHttp = { routes: new Map(), requests: [], failNetwork: false }
   let now = () => new Date()
   const asDriveFile = (f: FakeFile) => ({
@@ -255,6 +255,7 @@ export function loadGas(): FakeGas {
       },
       newTrigger: (handler: string) => {
         let hour = -1
+        let minute: number | undefined
         const b: any = {
           timeBased: () => b,
           everyDays: () => b,
@@ -262,7 +263,11 @@ export function loadGas(): FakeGas {
             hour = h
             return b
           },
-          create: () => triggers.push({ handler, hour }),
+          nearMinute: (m: number) => {
+            minute = m
+            return b
+          },
+          create: () => triggers.push(minute === undefined ? { handler, hour } : { handler, hour, minute }),
         }
         return b
       },

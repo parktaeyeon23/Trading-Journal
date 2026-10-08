@@ -6,6 +6,7 @@ import { formatClock, syncLabel } from '../../ui/syncText'
 import { BackupCard } from './BackupCard'
 import { RulesCard, TagsCard } from './TagsRulesCard'
 import { TradingSettingsCard } from './TradingSettingsCard'
+import { WeeklyQuestionsCard } from './WeeklyQuestionsCard'
 
 type TestState = { kind: 'idle' } | { kind: 'testing' } | { kind: 'ok'; message: string } | { kind: 'fail'; message: string }
 
@@ -122,6 +123,7 @@ export function SettingsScreen() {
       <TradingSettingsCard />
       <TagsCard />
       <RulesCard />
+      <WeeklyQuestionsCard />
 
       <section className="card stack" aria-labelledby="sync-title">
         <h2 id="sync-title" className="section-title">

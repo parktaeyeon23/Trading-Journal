@@ -13,7 +13,7 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 | `Sheets.js` | 헤더 이름 기반 시트 읽기·쓰기 |
 | `Api.js` | `doPost` 웹앱 API, secret 인증, LockService |
 | `Setup.js` | `setupSheets()` 초기 설정(멱등), `backupSpreadsheet()` |
-| `Quote.js` | `getQuote` — Yahoo 일봉 시세 조회(소스 의존은 `fetchDailyBars_` 하나), MarketCache에 캐시 |
+| `Quote.js` | `getQuote` — Yahoo 일봉 시세 조회(소스 의존은 `fetchDailyBars_` 하나), MarketCache에 캐시. `installMarketTrigger()` 지수·환율 매일 갱신 |
 | `Charts.js` | `uploadImage` — 차트 이미지를 Drive `ALPHA JOURNAL/charts/연/월`에 저장(링크 공개 보기), 삭제된 차트 파일 휴지통 이동 |
 | `Backup.js` | `installBackupTrigger()` 매일 03시 자동 백업 예약, `backupDaily()` 백업 + 오래된 사본 정리 |
 | `Tests.js` | 에디터에서 돌리는 `testApi_all()` — 임시 시트로만 실행 |
@@ -32,10 +32,11 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 5. `installBackupTrigger` 실행 → 매일 새벽 3시 무렵 "ALPHA JOURNAL/backup" 폴더에 DB 사본이 생긴다.
    - 최근 30일 사본은 모두, 그보다 오래된 달은 그 달의 마지막 사본 하나만 남기고 휴지통으로 옮긴다 (영구 삭제는 하지 않음).
    - 다시 실행해도 트리거는 하나만 유지된다. 왼쪽 시계 아이콘(트리거)에서 확인할 수 있다.
-6. 배포 → 새 배포 → 유형 "웹 앱"
+6. `installMarketTrigger` 실행 → 지수(KOSPI·KOSDAQ·S&P 500·NASDAQ)와 USD/KRW 환율 1년치를 지금 채우고, 매일 아침 7시 30분 무렵 다시 갱신한다. 캘린더의 원화 환산과 날짜별 지수 등락이 이 값을 쓴다. 다시 실행해도 트리거는 하나.
+7. 배포 → 새 배포 → 유형 "웹 앱"
    - 다음 사용자 인증 정보로 실행: **나**
    - 액세스 권한: **모든 사용자** (앱이 로그인 없이 호출하므로 필요. 대신 모든 요청은 API_SECRET으로 막는다)
-7. 나온 웹앱 URL(`.../exec`)과 프로젝트 설정 → 스크립트 속성의 `API_SECRET` 값을 앱의 설정 화면(오른쪽 위·사이드바 아래 톱니바퀴)에 넣고 연결 테스트를 누른다.
+8. 나온 웹앱 URL(`.../exec`)과 프로젝트 설정 → 스크립트 속성의 `API_SECRET` 값을 앱의 설정 화면(오른쪽 위·사이드바 아래 톱니바퀴)에 넣고 연결 테스트를 누른다.
 
 `API_SECRET`은 저장소·채팅·스크린샷에 올리지 않는다. 바꾸고 싶으면 스크립트 속성에서 값을 지우고 `setupSheets`를 다시 실행하면 새로 만들어진다.
 
@@ -61,6 +62,8 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 ```
 
 `uploadImage`: 원본(긴 변 2400px)과 썸네일(400px)을 Drive에 "링크가 있는 모든 사용자 · 보기"로 저장하고 ChartImages 행(`file_id`, `thumb_file_id`)을 써서 `{ ok, row }`로 돌려준다. 같은 id로 다시 보내면 파일을 또 만들지 않고 기존 행을 돌려준다(`duplicate: true`) — 응답을 못 받고 재시도해도 중복이 생기지 않는다. 형식은 webp·jpeg·png, 최대 15MB. ChartImages 행이 `deleted=true`가 되면(upsert·softDelete 모두) 원본·썸네일 파일을 휴지통으로 옮긴다. TradingView 스냅샷 링크는 파일 없이 `annotation: { link, image }`만 있는 일반 ChartImages 행이다.
+
+`getQuote`에 `market: "IDX"`를 주면 지수·환율 시리즈를 돌려준다: `KOSPI`, `KOSDAQ`, `SPX`, `NASDAQ`, `USDKRW` (MarketCache id `IDX:USDKRW|2026-10-07` 형식).
 
 `getQuote`: KR은 6자리 종목코드를 코스피(.KS) → 코스닥(.KQ) 순으로 찾는다. 약 3개월 일봉을 돌려주고 MarketCache(`KR:042700|2026-10-07` 같은 id)에 저장해 모든 기기로 동기화한다. 값이 같은 봉은 다시 쓰지 않는다.
 

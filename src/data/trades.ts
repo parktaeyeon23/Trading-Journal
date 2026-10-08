@@ -70,6 +70,32 @@ export interface TradeBundle {
   currentStop: number | null
 }
 
+interface Children {
+  plans: Plan[]
+  fills: Fill[]
+  stops: StopChange[]
+  reviews: Review[]
+  tags: PositionTag[]
+  charts: ChartImage[]
+}
+
+function bundleOf(position: Position, c: Children): TradeBundle {
+  const plan = latest(c.plans)
+  const sortedFills = [...c.fills].sort(compareFills)
+  const sortedStops = [...c.stops].sort((a, b) => (a.ts < b.ts ? -1 : 1))
+  return {
+    position,
+    plan,
+    fills: sortedFills,
+    stops: sortedStops,
+    review: latest(c.reviews),
+    tags: c.tags,
+    charts: [...c.charts].sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] || (a.sort ?? 0) - (b.sort ?? 0) || (a.created_at < b.created_at ? -1 : 1)),
+    summary: summarizeTrade({ direction: position.direction, originalStop: position.original_stop, plan, fills: sortedFills }),
+    currentStop: sortedStops.length ? sortedStops[sortedStops.length - 1].new_stop : (position.original_stop ?? null),
+  }
+}
+
 export async function loadTrade(repo: LocalRepo, positionId: string): Promise<TradeBundle | null> {
   const position = await repo.get('Positions', positionId)
   if (!position || position.deleted) return null
@@ -81,30 +107,32 @@ export async function loadTrade(repo: LocalRepo, positionId: string): Promise<Tr
     repo.listByPosition('PositionTags', positionId),
     repo.listByPosition('ChartImages', positionId),
   ])
-  const plan = latest(plans)
-  const sortedFills = [...fills].sort(compareFills)
-  const sortedStops = [...stops].sort((a, b) => (a.ts < b.ts ? -1 : 1))
-  return {
-    position,
-    plan,
-    fills: sortedFills,
-    stops: sortedStops,
-    review: latest(reviews),
-    tags,
-    charts: [...charts].sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] || (a.sort ?? 0) - (b.sort ?? 0) || (a.created_at < b.created_at ? -1 : 1)),
-    summary: summarizeTrade({ direction: position.direction, originalStop: position.original_stop, plan, fills: sortedFills }),
-    currentStop: sortedStops.length ? sortedStops[sortedStops.length - 1].new_stop : (position.original_stop ?? null),
-  }
+  return bundleOf(position, { plans, fills, stops, reviews, tags, charts })
 }
 
+/** Every trade, read with one scan per entity (not per position) so it stays quick with thousands of trades. */
 export async function loadAllTrades(repo: LocalRepo): Promise<TradeBundle[]> {
-  const positions = await repo.list('Positions')
-  const out: TradeBundle[] = []
-  for (const p of positions) {
-    const t = await loadTrade(repo, p.id)
-    if (t) out.push(t)
+  const [positions, plans, fills, stops, reviews, tags, charts] = await Promise.all([
+    repo.list('Positions'),
+    repo.list('Plans'),
+    repo.list('Fills'),
+    repo.list('StopHistory'),
+    repo.list('Reviews'),
+    repo.list('PositionTags'),
+    repo.list('ChartImages'),
+  ])
+  const groups = new Map<string, Children>()
+  for (const p of positions) groups.set(p.id, { plans: [], fills: [], stops: [], reviews: [], tags: [], charts: [] })
+  const add = <K extends keyof Children>(key: K, rows: Children[K]) => {
+    for (const r of rows) (groups.get(r.position_id)?.[key] as { position_id: string }[] | undefined)?.push(r)
   }
-  return out
+  add('plans', plans)
+  add('fills', fills)
+  add('stops', stops)
+  add('reviews', reviews)
+  add('tags', tags)
+  add('charts', charts)
+  return positions.map((p) => bundleOf(p, groups.get(p.id)!))
 }
 
 export const SLOT_ORDER: Record<ChartImage['slot'], number> = { setup: 0, entry: 1, exit: 2, post: 3, free: 4 }

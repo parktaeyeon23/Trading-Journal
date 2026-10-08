@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { BackendError, type BackendAdapter, type QuoteResult } from './backend'
+import { BackendError, type BackendAdapter, type QuoteMarket, type QuoteResult } from './backend'
 import { openAppDb } from './db'
 import { GasAdapter, type GasConfig } from './gasAdapter'
 import { LocalRepo } from './repo'
@@ -21,7 +21,7 @@ interface DataState {
   init: () => Promise<void>
   saveConfig: (cfg: GasConfig | null) => Promise<void>
   /** Live quote through the backend. Throws BackendError('not_setup') when no backend is set. */
-  getQuote: (symbol: string, market: 'KR' | 'US') => Promise<QuoteResult>
+  getQuote: (symbol: string, market: QuoteMarket) => Promise<QuoteResult>
 }
 
 let initPromise: Promise<void> | null = null

@@ -89,3 +89,30 @@ describe('getQuote', () => {
     expect(api({ action: 'getQuote', symbol: 'CRDO', market: 'JP' }).error.code).toBe('bad_request')
   })
 })
+
+describe('index and FX series', () => {
+  it('serves the fixed index/FX keys through getQuote and caches them as IDX:<key>', () => {
+    gas.http.routes.set(YAHOO + '%5EKS11', chart('^KS11', 32400, [['2026-10-07', 2600, 2620, 2590, 2610]]))
+    const r = api({ action: 'getQuote', symbol: 'kospi', market: 'IDX' })
+    expect(r).toMatchObject({ ok: true, cacheSymbol: 'IDX:KOSPI', asOf: '2026-10-07' })
+    expect(api({ action: 'pullAll' }).data.MarketCache[0]).toMatchObject({ id: 'IDX:KOSPI|2026-10-07', close: 2610 })
+    expect(api({ action: 'getQuote', symbol: 'NIKKEI', market: 'IDX' }).error.code).toBe('quote_not_found')
+  })
+
+  it('refreshes every series, keeps going past a failing one, and installs one morning trigger', () => {
+    gas.http.routes.set(YAHOO + 'KRW%3DX', chart('KRW=X', 3600, [['2026-10-06', 1400, 1412, 1398, 1410]]))
+    for (const s of ['%5EKS11', '%5EKQ11', '%5EGSPC']) gas.http.routes.set(YAHOO + s, chart(s, -14400, [['2026-10-06', 1, 1, 1, 1]]))
+    // NASDAQ has no route → 404 → not found
+    const res = gas.call('refreshMarketSeries', '1y')
+    expect(res.done).toEqual(['KOSPI', 'KOSDAQ', 'SPX', 'USDKRW'])
+    expect(res.failed[0]).toMatch(/^NASDAQ/)
+    expect(gas.http.requests.every((u) => u.includes('range=1y'))).toBe(true)
+    const fx = api({ action: 'pullAll' }).data.MarketCache.find((b: { symbol: string }) => b.symbol === 'IDX:USDKRW')
+    expect(fx).toMatchObject({ date: '2026-10-06', close: 1410 })
+
+    gas.call('installMarketTrigger')
+    gas.call('installMarketTrigger')
+    expect(gas.triggers).toEqual([{ handler: 'refreshMarketSeries', hour: 7, minute: 30 }])
+  })
+})
+
