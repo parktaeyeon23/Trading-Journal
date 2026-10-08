@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { defaultFees } from '../../src/core/fees'
 import { rateOn, toKrw } from '../../src/core/fx'
 import { gradeExecution } from '../../src/core/grade'
 import { adrPct, atr, atrStop, dayExtremeStop, swingStop } from '../../src/core/stops'
@@ -20,6 +21,21 @@ describe('gradeExecution', () => {
   })
   it('has no grade for an empty checklist', () => {
     expect(gradeExecution([], false)).toMatchObject({ grade: null, ratio: null })
+  })
+})
+
+describe('defaultFees', () => {
+  it('charges commission both ways and KR tax on sells only, truncating won', () => {
+    const r = { feePct: 0.015, sellTaxPct: 0.18 }
+    expect(defaultFees('KR', 'buy', 98_500, 85, r)).toEqual({ fee: 1255, tax: null })
+    expect(defaultFees('KR', 'sell', 98_500, 85, r)).toEqual({ fee: 1255, tax: 15070 })
+  })
+  it('rounds US to cents and never charges US tax', () => {
+    expect(defaultFees('US', 'sell', 72.05, 130, { feePct: 0.25, sellTaxPct: 0.18 })).toEqual({ fee: 23.42, tax: null })
+  })
+  it('returns nothing without rates or value', () => {
+    expect(defaultFees('KR', 'sell', 100, 1, { feePct: null, sellTaxPct: null })).toEqual({ fee: null, tax: null })
+    expect(defaultFees('KR', 'buy', 0, 1, { feePct: 1, sellTaxPct: 1 })).toEqual({ fee: null, tax: null })
   })
 })
 

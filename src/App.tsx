@@ -8,6 +8,7 @@ import { SettingsScreen } from './features/settings/SettingsScreen'
 import { TradesScreen } from './features/trades/TradesScreen'
 import type { RouteId } from './ui/routes'
 import { Shell } from './ui/Shell'
+import { useRepoQuery } from './ui/useRepoQuery'
 import { useRoute } from './ui/useRoute'
 
 const SCREENS: Record<RouteId, ComponentType> = {
@@ -23,15 +24,20 @@ export default function App() {
   const route = useRoute()
   const init = useData((s) => s.init)
   const ready = useData((s) => s.ready)
+  const reviewPending = useRepoQuery(async (r) => (await r.list('Positions')).filter((p) => p.status === 'review_pending').length, []) ?? 0
 
   useEffect(() => {
     void init()
   }, [init])
 
-  const Screen = SCREENS[route]
-  // reviewPending comes from positions in review_pending once Step 5 lands.
+  // New screen → start at the top.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [route.id, route.param])
+
+  const Screen = SCREENS[route.id]
   return (
-    <Shell current={route} reviewPending={0}>
+    <Shell current={route.id} reviewPending={reviewPending}>
       {ready ? <Screen /> : <p className="empty">불러오는 중…</p>}
     </Shell>
   )

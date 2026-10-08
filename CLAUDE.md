@@ -43,6 +43,8 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
 
 - 화면은 `src/data/repo.ts`의 `LocalRepo`(Zustand `useData`로 얻음)로만 읽고 쓴다. 데이터 네트워크는 `SyncEngine`만 쓴다. 예외: 실시간 시세는 `useData().getQuote` (실패하면 동기화된 MarketCache로 대체).
   - 앱 설정값(계좌 규모, 기본 RPT, 상한 등)은 Settings 엔티티, `src/data/settings.ts`로 읽고 쓴다.
+  - 포지션을 바꾸는 쓰기(계획·체결·손절 이동·복기)는 `src/data/trades.ts` 함수로만 한다. 상태(planned/open/review_pending/done)는 체결과 복기에서 자동으로 정해진다.
+  - 체결 정렬은 항상 `compareFills` (ts, 같으면 created_at). 기본 태그·규칙은 고정 id로 시드한다.
   - 손익 평균단가는 이동평균법 (`src/core/pnl.ts`). 시세 출처는 Yahoo, `gas/Quote.js`의 `fetchDailyBars_` 하나에만 의존.
   - 모든 쓰기는 IndexedDB + outbox에 같은 트랜잭션으로 들어가고, 삭제는 `deleted=true` 소프트 삭제.
   - 엔티티·필드 이름은 `gas/Config.js`와 `src/data/types.ts`가 같아야 한다 (서버는 모르는 필드를 거부). 필드 추가는 둘 다 고친다.

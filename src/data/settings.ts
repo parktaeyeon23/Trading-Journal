@@ -23,4 +23,6 @@ export const SETTING_KEYS = {
   maxPositionPct: 'max_position_pct',
   maxOpenRiskPct: 'max_open_risk_pct',
   gradeBands: 'grade_bands',
+  feeRate: (market: 'KR' | 'US') => `fee_rate_${market}`,
+  sellTaxKR: 'tax_rate_KR',
 } as const

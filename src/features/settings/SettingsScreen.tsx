@@ -4,6 +4,8 @@ import { makeAdapter, useData } from '../../data/dataStore'
 import type { ConflictRecord } from '../../data/repo'
 import { formatClock, syncLabel } from '../../ui/syncText'
 import { BackupCard } from './BackupCard'
+import { RulesCard, TagsCard } from './TagsRulesCard'
+import { TradingSettingsCard } from './TradingSettingsCard'
 
 type TestState = { kind: 'idle' } | { kind: 'testing' } | { kind: 'ok'; message: string } | { kind: 'fail'; message: string }
 
@@ -116,6 +118,10 @@ export function SettingsScreen() {
           </p>
         )}
       </section>
+
+      <TradingSettingsCard />
+      <TagsCard />
+      <RulesCard />
 
       <section className="card stack" aria-labelledby="sync-title">
         <h2 id="sync-title" className="section-title">

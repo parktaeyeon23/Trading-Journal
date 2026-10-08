@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react'
-import { parseHash, type RouteId } from './routes'
+import { useMemo, useSyncExternalStore } from 'react'
+import { parseHash, type RouteState } from './routes'
 
 function subscribe(cb: () => void) {
   window.addEventListener('hashchange', cb)
@@ -7,6 +7,7 @@ function subscribe(cb: () => void) {
 }
 
 /** Hash routing keeps GitHub Pages happy (no server rewrites needed). */
-export function useRoute(): RouteId {
-  return useSyncExternalStore(subscribe, () => parseHash(window.location.hash))
+export function useRoute(): RouteState {
+  const hash = useSyncExternalStore(subscribe, () => window.location.hash)
+  return useMemo(() => parseHash(hash), [hash])
 }

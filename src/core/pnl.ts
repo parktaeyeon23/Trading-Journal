@@ -8,6 +8,8 @@ import type { Direction } from './sizing'
 export interface PnlFill {
   id: string
   ts: string
+  /** Tie-breaker when two fills share a timestamp (entered within the same minute). */
+  created_at?: string
   side: 'buy' | 'sell'
   price: number
   qty: number
@@ -54,8 +56,16 @@ export function entrySide(direction: Direction): 'buy' | 'sell' {
 
 const costOf = (f: PnlFill) => (f.fee ?? 0) + (f.tax ?? 0)
 
+/** Chronological order: by fill time, then by when it was recorded. */
+export function compareFills(a: PnlFill, b: PnlFill): number {
+  if (a.ts !== b.ts) return a.ts < b.ts ? -1 : 1
+  const ca = a.created_at ?? ''
+  const cb = b.created_at ?? ''
+  return ca < cb ? -1 : ca > cb ? 1 : 0
+}
+
 export function positionPnl(direction: Direction, fills: PnlFill[]): PositionPnl {
-  const sorted = [...fills].sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0))
+  const sorted = [...fills].sort(compareFills)
   const inSide = entrySide(direction)
   const sign = direction === 'long' ? 1 : -1
 

@@ -4,6 +4,7 @@ import { openAppDb } from './db'
 import { GasAdapter, type GasConfig } from './gasAdapter'
 import { LocalRepo } from './repo'
 import { SyncEngine, type SyncStatus } from './sync'
+import { ensureDefaults } from './trades'
 
 const META_BACKEND = 'backend'
 
@@ -41,6 +42,7 @@ export const useData = create<DataState>((set, get) => ({
       const repo = new LocalRepo(db)
       const engine = new SyncEngine(repo, { onStatus: (status) => set({ status: { ...status } }) })
       repo.onChange(() => set((s) => ({ version: s.version + 1 })))
+      await ensureDefaults(repo)
       const config = (await repo.getMeta<GasConfig>(META_BACKEND)) ?? null
       engine.setAdapter(makeAdapter(config))
       set({ repo, engine, config, ready: true })

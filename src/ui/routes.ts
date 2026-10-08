@@ -24,9 +24,20 @@ const ALL_ROUTES: RouteId[] = [...ROUTES.map((r) => r.id), 'settings']
 
 export const DEFAULT_ROUTE: RouteId = 'calendar'
 
-export function parseHash(hash: string): RouteId {
-  const id = hash.replace(/^#\/?/, '').split('/')[0]
-  return (ALL_ROUTES as string[]).includes(id) ? (id as RouteId) : DEFAULT_ROUTE
+export interface RouteState {
+  id: RouteId
+  /** Second path segment, e.g. the position id in #/trades/<id>. */
+  param: string | null
 }
 
-export const hrefFor = (id: RouteId) => `#/${id}`
+export function parseHash(hash: string): RouteState {
+  const [id, param] = hash.replace(/^#\/?/, '').split('/')
+  if (!(ALL_ROUTES as string[]).includes(id)) return { id: DEFAULT_ROUTE, param: null }
+  return { id: id as RouteId, param: param ? decodeURIComponent(param) : null }
+}
+
+export const hrefFor = (id: RouteId, param?: string) => (param ? `#/${id}/${encodeURIComponent(param)}` : `#/${id}`)
+
+export function navigate(id: RouteId, param?: string) {
+  window.location.hash = hrefFor(id, param)
+}

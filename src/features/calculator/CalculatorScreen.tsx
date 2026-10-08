@@ -64,7 +64,7 @@ export function CalculatorScreen() {
   const [accounts, setAccounts] = useState<Record<Market, number>>({ KR: 0, US: 0 })
   const [openRisk, setOpenRisk] = useState({ pct: 0, withoutStop: 0 })
   const [history, setHistory] = useState<HistoryItem[]>([])
-  const [sent, setSent] = useState<string | null>(null)
+  const [sent, setSent] = useState<{ text: string; id: string } | null>(null)
 
   const currency: Currency = market === 'KR' ? 'KRW' : 'USD'
 
@@ -196,7 +196,7 @@ export function CalculatorScreen() {
     const next = [item, ...history].slice(0, HISTORY_MAX)
     setHistory(next)
     await repo.setMeta(META_HISTORY, next)
-    setSent(`${ticker || '종목 미정'} ${chosen.qty.toLocaleString()}주 계획을 트레이드에 저장했습니다.`)
+    setSent({ text: `${ticker || '종목 미정'} ${chosen.qty.toLocaleString()}주 계획을 트레이드에 저장했습니다.`, id: position.id })
   }
 
   function recall(h: HistoryItem) {
@@ -410,7 +410,7 @@ export function CalculatorScreen() {
             )}
             {sent && (
               <p className="notice notice-good" role="status">
-                {sent} <a href={hrefFor('trades')}>트레이드 보기</a>
+                {sent.text} <a href={hrefFor('trades', sent.id)}>계획 보기</a>
               </p>
             )}
           </section>

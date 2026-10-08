@@ -1,7 +1,7 @@
 /**
  * R-multiple, MFE/MAE, open risk. R always uses the ORIGINAL stop.
  */
-import { entrySide, type PnlFill } from './pnl'
+import { compareFills, entrySide, type PnlFill } from './pnl'
 import type { Direction } from './sizing'
 
 /**
@@ -19,7 +19,7 @@ export function oneR(args: {
   if (args.plannedRisk && args.plannedRisk > 0) return args.plannedRisk
   if (!args.originalStop || !(args.originalStop > 0)) return null
   const side = entrySide(args.direction)
-  const entries = args.fills.filter((f) => f.side === side).sort((a, b) => (a.ts < b.ts ? -1 : 1))
+  const entries = args.fills.filter((f) => f.side === side).sort(compareFills)
   if (!entries.length) return null
   const staged = entries.filter((f) => f.pyramid_stage === 1)
   // Without stage info, the first fill (by time) stands for stage 1.

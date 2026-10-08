@@ -29,6 +29,16 @@ describe('positionPnl — moving average', () => {
     expect(p.avgExit).toBeCloseTo((110 * 5 + 120 * 10) / 15, 9)
   })
 
+  it('breaks timestamp ties by record order, so a same-minute buy/sell pair stays in order', () => {
+    const same = '2026-10-08T08:31:00.000Z'
+    const fills: PnlFill[] = [
+      { id: 's', ts: same, created_at: '2026-10-08T08:31:20.000Z', side: 'sell', price: 120, qty: 10 },
+      { id: 'b', ts: same, created_at: '2026-10-08T08:31:05.000Z', side: 'buy', price: 100, qty: 10 },
+    ]
+    const p = positionPnl('long', fills)
+    expect(p).toMatchObject({ oversold: false, openQty: 0, realizedGross: 200 })
+  })
+
   it('sorts fills by time before computing', () => {
     n = 0
     const fills = [f('buy', 100, 10), f('sell', 120, 10)]
