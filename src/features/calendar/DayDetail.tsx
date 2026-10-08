@@ -10,6 +10,7 @@ import { useRepoQuery } from '../../ui/useRepoQuery'
 import { coverImage } from '../chartbook/chartItems'
 import { FallbackImg } from '../chartbook/FallbackImg'
 import { full, longDate, toneClass } from './calText'
+import { requestSeries, retrySeries, useIndexFetchStates } from './indexFetch'
 
 const INDICES = [
   { key: 'KOSPI', label: 'KOSPI' },
@@ -18,8 +19,6 @@ const INDICES = [
   { key: 'NASDAQ', label: 'NASDAQ' },
 ] as const
 
-/** Index series already asked for this session, so a missing day doesn't refetch on every render. */
-const requested = new Set<string>()
 
 interface DayDetailProps {
   date: string
@@ -42,15 +41,26 @@ export function DayDetail({ date, bucket, events, byId, unit, ctx }: DayDetailPr
     [date],
   )
 
+  const fetches = useIndexFetchStates()
+
   // Fill a missing index day from the backend (once per series per session). Weekends have no bars.
   useEffect(() => {
     if (!data || !configured) return
-    for (const m of data.moves) {
-      if (m.move || requested.has(m.key)) continue
-      requested.add(m.key)
-      getQuote(m.key, 'IDX').catch(() => {})
-    }
+    for (const m of data.moves) if (!m.move) requestSeries(m.key, getQuote)
   }, [data, configured, getQuote])
+
+  const missing = data ? data.moves.filter((m) => !m.move).map((m) => m.key) : []
+  const failures = [...new Set(missing.map((k) => fetches.get(k)).flatMap((f) => (f?.state === 'failed' ? [f.message] : [])))]
+  const loading = missing.some((k) => fetches.get(k)?.state === 'loading')
+  const indexNote = !data
+    ? null
+    : !configured && missing.length
+      ? '설정에서 백엔드를 연결하면 지수를 불러옵니다.'
+      : loading
+        ? '지수를 불러오는 중…'
+        : missing.length === INDICES.length && !failures.length
+          ? '이날 지수 일봉이 없습니다 — 주말·휴장일이거나, 장 마감 전이거나, GAS에서 installMarketTrigger를 실행하기 전 기간입니다.'
+          : null
 
   const dayEvents = events.filter((e) => e.date === date)
   return (
@@ -69,6 +79,19 @@ export function DayDetail({ date, bucket, events, byId, unit, ctx }: DayDetailPr
             </div>
           ))}
         </div>
+      )}
+      {failures.map((msg) => (
+        <div key={msg} className="notice notice-bad row wrap" role="alert">
+          <span>{msg}</span>
+          <button type="button" className="btn btn-secondary btn-small push-right" onClick={() => retrySeries(missing, getQuote)}>
+            다시 시도
+          </button>
+        </div>
+      ))}
+      {indexNote && (
+        <p className="help" style={{ margin: 0 }}>
+          {indexNote}
+        </p>
       )}
 
       {dayEvents.length ? (
