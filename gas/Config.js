@@ -13,6 +13,10 @@ var COMMON_FIELDS = {
   updated_at: { type: 'ts', required: true },
   deleted: { type: 'boolean' },
   schema_version: { type: 'int' },
+  // Server write time. Set by the server on every insert/update, never trusted
+  // from clients. pullAll filters on it, so rows edited offline on another
+  // device (old updated_at, late upload) still reach everyone.
+  synced_at: { type: 'ts' },
 }
 
 var MARKETS = ['KR', 'US']

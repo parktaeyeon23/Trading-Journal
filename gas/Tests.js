@@ -47,7 +47,7 @@ function testApi_roundTrip() {
   var pulled = call_({ action: 'pullAll' })
   var p = pulled.data.Positions.filter(function (r) { return r.id === 'rt-p1' })[0]
   assert_(p && p.ticker === '042700', 'ticker lost leading zeros or row missing: ' + JSON.stringify(p))
-  var later = call_({ action: 'pullAll', since: t })
+  var later = call_({ action: 'pullAll', since: pulled.serverTime })
   assert_(later.data.Positions.length === 0, 'since filter returned an unchanged row')
 }
 

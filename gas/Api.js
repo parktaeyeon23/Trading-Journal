@@ -33,7 +33,11 @@ function handleRequest(req) {
       case 'ping':
         return { ok: true, serverTime: nowIso_(), schemaVersion: SCHEMA_VERSION }
       case 'pullAll':
-        return pullAll_(req.since)
+        // Locked too: a read that overlaps a write could otherwise miss a row
+        // whose synced_at is earlier than the serverTime handed back.
+        return withLock_(function () {
+          return pullAll_(req.since)
+        })
       case 'getSettings':
         return getSettings_()
       case 'upsert':
@@ -73,7 +77,9 @@ function pullAll_(since) {
     var rows = openTable_(ss, entity).rows
     data[entity] = sinceIso
       ? rows.filter(function (r) {
-          return r.updated_at && r.updated_at > sinceIso
+          // Rows written before synced_at existed fall back to updated_at.
+          var changed = r.synced_at || r.updated_at
+          return changed && changed > sinceIso
         })
       : rows
   })
@@ -134,6 +140,10 @@ function upsert_(entity, rows) {
     existing[id] = rowAt_(table, id)
   })
   var plan = planUpsert(existing, valid)
+  var stamp = nowIso_()
+  plan.inserts.concat(plan.updates).forEach(function (row) {
+    row.synced_at = stamp
+  })
   applyPlan_(table, plan)
   return {
     op: 'upsert',
@@ -154,7 +164,7 @@ function softDelete_(entity, ids) {
   var updates = []
   var notFound = []
   ids.forEach(function (id) {
-    if (String(id) in table.index) updates.push({ id: String(id), deleted: true, updated_at: now })
+    if (String(id) in table.index) updates.push({ id: String(id), deleted: true, updated_at: now, synced_at: now })
     else notFound.push(String(id))
   })
   applyPlan_(table, { inserts: [], updates: updates, unchanged: [], conflicts: [] })

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { SettingsIcon } from './icons'
 import { ROUTES, hrefFor, type RouteId } from './routes'
+import { SyncBadge } from './SyncBadge'
 
 interface ShellProps {
   current: RouteId
@@ -19,32 +21,38 @@ export function Shell({ current, reviewPending, children }: ShellProps) {
           <div className="brand-name">ALPHA JOURNAL</div>
         </div>
         {ROUTES.map(({ id, label, Icon }) => (
-          <a
-            key={id}
-            className="nav-item"
-            href={hrefFor(id)}
-            aria-current={id === current ? 'page' : undefined}
-          >
+          <a key={id} className="nav-item" href={hrefFor(id)} aria-current={id === current ? 'page' : undefined}>
             <Icon />
             {label}
-            {id === 'trades' && reviewPending > 0 && (
-              <span className="badge-alert">복기 {reviewPending}</span>
-            )}
+            {id === 'trades' && reviewPending > 0 && <span className="badge-alert">복기 {reviewPending}</span>}
           </a>
         ))}
-        <div className="sidebar-foot">로컬 전용 · 동기화 미설정</div>
+        <div className="sidebar-foot">
+          <SyncBadge />
+          <a className="nav-item" href={hrefFor('settings')} aria-current={current === 'settings' ? 'page' : undefined}>
+            <SettingsIcon />
+            설정
+          </a>
+        </div>
       </nav>
 
-      <main className="main">{children}</main>
+      <div className="content">
+        <header className="mobile-top">
+          <div className="brand-mark small" aria-hidden="true">
+            α
+          </div>
+          <span className="brand-name">ALPHA JOURNAL</span>
+          <SyncBadge compact />
+          <a className="icon-btn" href={hrefFor('settings')} aria-label="설정" aria-current={current === 'settings' ? 'page' : undefined}>
+            <SettingsIcon size={20} />
+          </a>
+        </header>
+        <main className="main">{children}</main>
+      </div>
 
       <nav className="tabbar" aria-label="하단 탭">
         {ROUTES.map(({ id, label, Icon }) => (
-          <a
-            key={id}
-            className="tab-item"
-            href={hrefFor(id)}
-            aria-current={id === current ? 'page' : undefined}
-          >
+          <a key={id} className="tab-item" href={hrefFor(id)} aria-current={id === current ? 'page' : undefined}>
             <Icon size={20} />
             {label}
             {id === 'trades' && reviewPending > 0 && (

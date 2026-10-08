@@ -58,7 +58,8 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 | 검증 | 필수 필드·타입·열거값·날짜·참조(예: Fills.position_id가 Positions에 있는지). 실패한 행만 `rejected`에 필드별 사유로 돌려주고 나머지는 저장 |
 | softDelete | `deleted=true`, `updated_at`=서버 시각. 행은 지우지 않는다 |
 | batch | ops를 순서대로 실행, 앞 op에서 만든 부모를 뒤 op가 참조할 수 있다. 트랜잭션은 아니다 (op 단위로 반영) |
-| pullAll | `since` 이후 `updated_at`인 행만. 응답의 `serverTime`을 다음 `since`로 쓴다 |
-| 한도 | op당 500행. 쓰기는 LockService로 줄 세움, 20초 안에 못 잡으면 `busy` |
+| pullAll | 서버가 `since` 이후에 쓴 행만 (`synced_at` 기준). 응답의 `serverTime`을 다음 `since`로 쓴다. 다른 기기에서 오프라인으로 오래전에 고친 행도 업로드된 시점 기준이라 빠지지 않는다 |
+| synced_at | 모든 쓰기에 서버가 찍는 시각. 클라이언트가 보낸 값은 무시하고 덮어쓴다 |
+| 한도 | op당 500행. 쓰기와 pullAll은 LockService로 줄 세움, 20초 안에 못 잡으면 `busy` |
 
 에러 코드: `bad_request`, `unauthorized`, `not_setup`, `unknown_action`, `unknown_entity`, `too_many_rows`, `busy`, `internal`.

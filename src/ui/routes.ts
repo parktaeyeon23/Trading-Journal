@@ -1,10 +1,12 @@
 import type { ComponentType } from 'react'
 import { AnalysisIcon, CalculatorIcon, CalendarIcon, NotesIcon, TradesIcon } from './icons'
 
-export type RouteId = 'calendar' | 'trades' | 'calculator' | 'analysis' | 'notes'
+export type TabId = 'calendar' | 'trades' | 'calculator' | 'analysis' | 'notes'
+/** Tabs plus screens reached from elsewhere (settings opens from the sync status). */
+export type RouteId = TabId | 'settings'
 
 export interface RouteDef {
-  id: RouteId
+  id: TabId
   label: string
   Icon: ComponentType<{ size?: number }>
 }
@@ -18,11 +20,13 @@ export const ROUTES: RouteDef[] = [
   { id: 'notes', label: '노트', Icon: NotesIcon },
 ]
 
+const ALL_ROUTES: RouteId[] = [...ROUTES.map((r) => r.id), 'settings']
+
 export const DEFAULT_ROUTE: RouteId = 'calendar'
 
 export function parseHash(hash: string): RouteId {
   const id = hash.replace(/^#\/?/, '').split('/')[0]
-  return ROUTES.some((r) => r.id === id) ? (id as RouteId) : DEFAULT_ROUTE
+  return (ALL_ROUTES as string[]).includes(id) ? (id as RouteId) : DEFAULT_ROUTE
 }
 
 export const hrefFor = (id: RouteId) => `#/${id}`

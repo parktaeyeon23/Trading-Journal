@@ -27,7 +27,7 @@ describe('setupSheets', () => {
     expect(names).not.toContain('Sheet1')
     expect(names).toEqual(expect.arrayContaining(['Positions', 'Fills', 'Reviews', 'ChartImages', 'Settings']))
     const header = ss.getSheetByName('Fills')!.getRange(1, 1, 1, 6).getValues()[0]
-    expect(header).toEqual(['id', 'created_at', 'updated_at', 'deleted', 'schema_version', 'position_id'])
+    expect(header).toEqual(['id', 'created_at', 'updated_at', 'deleted', 'schema_version', 'synced_at'])
   })
 
   it('is idempotent', () => {
@@ -105,11 +105,31 @@ describe('upsert and pullAll', () => {
     expect(api({ action: 'pullAll' }).data.Plans[0].pyramid_plan).toEqual({ stages: [50, 30, 20] })
   })
 
-  it('pullAll(since) returns only rows changed after since', () => {
-    api({ action: 'upsert', entity: 'Positions', rows: [position('p1'), position('p2', '2026-10-03T00:00:00Z')] })
-    const res = api({ action: 'pullAll', since: '2026-10-02T00:00:00Z' })
+  it('pullAll(since) returns only rows the server wrote after since', async () => {
+    api({ action: 'upsert', entity: 'Positions', rows: [position('p1')] })
+    const first = api({ action: 'pullAll' })
+    await new Promise((r) => setTimeout(r, 5))
+    api({ action: 'upsert', entity: 'Positions', rows: [position('p2')] })
+    const res = api({ action: 'pullAll', since: first.serverTime })
     expect(res.data.Positions.map((p: any) => p.id)).toEqual(['p2'])
     expect(api({ action: 'pullAll', since: 'yesterday' }).error.code).toBe('bad_request')
+  })
+
+  it('still delivers rows edited offline long ago but uploaded after the last pull', async () => {
+    const first = api({ action: 'pullAll' })
+    await new Promise((r) => setTimeout(r, 5))
+    // Edited on another device days before, uploaded only now.
+    const old = '2026-01-01T00:00:00.000Z'
+    api({ action: 'upsert', entity: 'Positions', rows: [{ ...position('old', old), created_at: old }] })
+    const res = api({ action: 'pullAll', since: first.serverTime })
+    expect(res.data.Positions.map((p: any) => p.id)).toEqual(['old'])
+    expect(res.data.Positions[0].synced_at > first.serverTime).toBe(true)
+  })
+
+  it('stamps synced_at on the server and ignores a client-sent value', () => {
+    api({ action: 'upsert', entity: 'Positions', rows: [{ ...position('p1'), synced_at: '2000-01-01T00:00:00.000Z' }] })
+    const p = api({ action: 'pullAll' }).data.Positions[0]
+    expect(p.synced_at > '2026-01-01').toBe(true)
   })
 
   it('updates in place when updated_at is newer and keeps created_at', () => {
