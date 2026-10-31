@@ -14,6 +14,9 @@ import {
   loadTrade,
   moveStop,
   removeFill,
+  updateFill,
+  updateStopMove,
+  FillOrderError,
   rulesForSetup,
   saveReview,
   setReasonTags,
@@ -152,5 +155,62 @@ describe('reason tags', () => {
     await addFill(repo, p.id, { ts: ts('3'), side: 'sell', price: 75, qty: 10 })
     await saveReview(repo, p.id, { checklist: { a: true }, grade: 'A', good: null, improve: null, next_rule: null, promoted_rule: false, mistakeTagIds: ['tag-mistake-chase'], emotionTags: [] })
     expect(await ids()).toEqual(['tag-mistake-chase', 'tag-reason-rs', 'tag-reason-tight'])
+  })
+})
+
+describe('editing fills and stop moves later', () => {
+  it('re-stages entries in time order and re-derives status when a time is fixed', async () => {
+    const p = await crdoPlan()
+    // Entered the next day, out of order: the 2nd buy first, then the 1st.
+    await addFill(repo, p.id, { ts: ts('5'), side: 'buy', price: 74.1, qty: 49 })
+    await addFill(repo, p.id, { ts: ts('2'), side: 'buy', price: 72.55, qty: 81 })
+    let t = (await loadTrade(repo, p.id))!
+    expect(t.fills.map((f) => [f.price, f.pyramid_stage])).toEqual([
+      [72.55, 1],
+      [74.1, 2],
+    ])
+    await addFill(repo, p.id, { ts: ts('7'), side: 'sell', price: 75, qty: 130 })
+    expect((await loadTrade(repo, p.id))!.position.status).toBe('review_pending')
+
+    // Fix the first buy's time to after the second: the stages follow the new order.
+    // (Stage 1 is 81 shares of the 162 plan, so 49 first leaves stage 1 still open.)
+    const first = t.fills[0]
+    await updateFill(repo, first.id, { ts: ts('6'), price: 72.55, qty: 81 })
+    t = (await loadTrade(repo, p.id))!
+    expect(t.fills.map((f) => [f.price, f.pyramid_stage])).toEqual([
+      [74.1, 1],
+      [72.55, 1],
+      [75, null],
+    ])
+    // Quantity fix that leaves shares open → back to open.
+    await updateFill(repo, t.fills[2].id, { ts: ts('7'), price: 75, qty: 100 })
+    expect((await loadTrade(repo, p.id))!.position.status).toBe('open')
+  })
+
+  it('refuses edits that would sell more than was held at that time', async () => {
+    const p = await crdoPlan()
+    const buy = await addFill(repo, p.id, { ts: ts('2'), side: 'buy', price: 72, qty: 100 })
+    const sell = await addFill(repo, p.id, { ts: ts('4'), side: 'sell', price: 75, qty: 100 })
+    await expect(updateFill(repo, sell.id, { ts: ts('1'), price: 75, qty: 100 })).rejects.toBeInstanceOf(FillOrderError)
+    await expect(updateFill(repo, buy.id, { ts: ts('2'), price: 72, qty: 50 })).rejects.toBeInstanceOf(FillOrderError)
+    await expect(addFill(repo, p.id, { ts: ts('1'), side: 'sell', price: 70, qty: 10 })).rejects.toBeInstanceOf(FillOrderError)
+    await expect(removeFill(repo, buy.id)).rejects.toBeInstanceOf(FillOrderError)
+    // Nothing changed.
+    expect((await loadTrade(repo, p.id))!.fills.map((f) => f.qty)).toEqual([100, 100])
+  })
+
+  it('records a back-dated stop move against the stop in force then, and can fix it', async () => {
+    const p = await crdoPlan()
+    await addFill(repo, p.id, { ts: ts('2'), side: 'buy', price: 72.55, qty: 81 })
+    await moveStop(repo, p.id, 71.9, '본전 근처', ts('5'))
+    const early = await moveStop(repo, p.id, 70.5, '1차 상향', ts('3'))
+    expect(early.old_stop).toBe(69.8)
+    let t = (await loadTrade(repo, p.id))!
+    expect(t.stops.map((m) => m.new_stop)).toEqual([70.5, 71.9])
+    expect(t.currentStop).toBe(71.9)
+    await updateStopMove(repo, early.id, { ts: ts('6'), new_stop: 72.2, reason: '고점 갱신 후' })
+    t = (await loadTrade(repo, p.id))!
+    expect(t.currentStop).toBe(72.2)
+    expect(t.position.original_stop).toBe(69.8) // R stays on the original stop
   })
 })

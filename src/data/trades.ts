@@ -187,23 +187,73 @@ export function nextPyramidStage(plan: Plan | null, fills: Fill[], direction: Po
   return st.nextStage ?? pp.weights.length
 }
 
+/** A fill change that would sell (or cover) more than was held at that moment. */
+export class FillOrderError extends Error {}
+
+/** Refuses a set of fills in which an exit, in time order, exceeds the shares held then. */
+function assertNoOversell(direction: Position['direction'], fills: Pick<Fill, 'id' | 'ts' | 'created_at' | 'side' | 'price' | 'qty'>[]) {
+  if (positionPnl(direction, fills).oversold) {
+    throw new FillOrderError('이 시각이면 그때 보유 수량보다 많이 팔게 됩니다. 매수보다 늦은 시각인지, 수량이 맞는지 확인하세요.')
+  }
+}
+
+/**
+ * Re-numbers the pyramid stages of the entry fills in time order. A fill
+ * entered late, or whose time was edited, lands in the stage it really was.
+ */
+export async function restage(repo: LocalRepo, positionId: string): Promise<void> {
+  const t = await loadTrade(repo, positionId)
+  if (!t) return
+  const side = entrySide(t.position.direction)
+  const prior: Fill[] = []
+  for (const f of t.fills) {
+    if (f.side !== side) continue
+    const stage = nextPyramidStage(t.plan, prior, t.position.direction)
+    if ((f.pyramid_stage ?? null) !== stage) await repo.put('Fills', { id: f.id, pyramid_stage: stage })
+    prior.push({ ...f, pyramid_stage: stage })
+  }
+}
+
 export async function addFill(repo: LocalRepo, positionId: string, input: FillInput): Promise<Fill> {
   const t = await loadTrade(repo, positionId)
   if (!t) throw new Error('포지션을 찾을 수 없습니다.')
   const isEntry = input.side === entrySide(t.position.direction)
+  assertNoOversell(t.position.direction, [...t.fills, { ...input, id: '__new__', created_at: '\uffff' }])
   const fill = await repo.put('Fills', {
     ...input,
     position_id: positionId,
     pyramid_stage: isEntry ? nextPyramidStage(t.plan, t.fills, t.position.direction) : null,
   })
+  // A back-dated entry may belong before existing ones.
+  if (isEntry && t.fills.some((f) => f.ts > input.ts)) await restage(repo, positionId)
   await refreshStatus(repo, positionId)
   return fill
+}
+
+/** Changes a saved fill (time, price, quantity, costs, memo). Side and position stay. */
+export async function updateFill(repo: LocalRepo, fillId: string, changes: Omit<FillInput, 'side'>): Promise<Fill> {
+  const f = await repo.get('Fills', fillId)
+  if (!f || f.deleted) throw new Error('체결을 찾을 수 없습니다.')
+  const t = await loadTrade(repo, f.position_id)
+  if (!t) throw new Error('포지션을 찾을 수 없습니다.')
+  assertNoOversell(
+    t.position.direction,
+    t.fills.map((x) => (x.id === fillId ? { ...x, ...changes } : x)),
+  )
+  const saved = await repo.put('Fills', { id: fillId, ...changes })
+  await restage(repo, f.position_id)
+  await refreshStatus(repo, f.position_id)
+  return saved
 }
 
 export async function removeFill(repo: LocalRepo, fillId: string): Promise<void> {
   const f = await repo.get('Fills', fillId)
   if (!f) return
+  const t = await loadTrade(repo, f.position_id)
+  // Removing a buy that later sells depended on would leave an oversold trade.
+  if (t) assertNoOversell(t.position.direction, t.fills.filter((x) => x.id !== fillId))
   await repo.remove('Fills', fillId)
+  await restage(repo, f.position_id)
   await refreshStatus(repo, f.position_id)
 }
 
@@ -224,10 +274,22 @@ export async function createUnplannedTrade(
   return position
 }
 
-export async function moveStop(repo: LocalRepo, positionId: string, newStop: number, reason: string | null): Promise<StopChange> {
+export async function moveStop(repo: LocalRepo, positionId: string, newStop: number, reason: string | null, ts: string = new Date().toISOString()): Promise<StopChange> {
   const t = await loadTrade(repo, positionId)
   if (!t) throw new Error('포지션을 찾을 수 없습니다.')
-  return repo.put('StopHistory', { position_id: positionId, ts: new Date().toISOString(), old_stop: t.currentStop, new_stop: newStop, reason })
+  // The stop in force at that moment: the last move before it, else the original stop.
+  const before = t.stops.filter((m) => m.ts <= ts).at(-1)
+  const old = before ? before.new_stop : (t.position.original_stop ?? null)
+  return repo.put('StopHistory', { position_id: positionId, ts, old_stop: old, new_stop: newStop, reason })
+}
+
+/** Corrects a recorded stop move (time, price, reason). */
+export async function updateStopMove(repo: LocalRepo, moveId: string, changes: { ts: string; new_stop: number; reason: string | null }): Promise<StopChange> {
+  return repo.put('StopHistory', { id: moveId, ...changes })
+}
+
+export async function removeStopMove(repo: LocalRepo, moveId: string): Promise<void> {
+  await repo.remove('StopHistory', moveId)
 }
 
 /** Re-derives status from fills and review. Never touches a planned trade's other fields. */

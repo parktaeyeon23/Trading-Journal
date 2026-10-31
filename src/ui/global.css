@@ -2310,3 +2310,62 @@ p.week-memo.faint {
   border-radius: var(--radius);
   background: var(--surface-muted);
 }
+
+/* Fill / stop time */
+.when-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.when-row .input {
+  flex: 1 1 200px;
+}
+.when-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.when-chips .pill {
+  min-height: var(--touch);
+}
+.when-sticky {
+  color: var(--warn-text);
+}
+.link-inline {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--brand);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.edit-btn {
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.edit-btn:hover {
+  color: var(--brand);
+}
+.log li {
+  align-items: center;
+}
+.danger-outline {
+  color: var(--alert-text);
+  border-color: var(--alert-text);
+}
+.btn-secondary.danger-outline:not(:disabled):hover {
+  color: var(--alert-text);
+  border-color: var(--alert-text);
+  background: var(--alert-bg);
+}
+/* Fits a phone without sideways scrolling (the date column must stay visible). */
+.table.fills-table {
+  min-width: 0;
+}
+.fills-table td.num:first-child {
+  white-space: nowrap;
+}

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { formatMoney, formatPct, formatPrice } from '../../core/format'
 import { entrySide } from '../../core/pnl'
-import { useData } from '../../data/dataStore'
 import { Chartbook } from '../chartbook/Chartbook'
-import { loadTrade, removeFill } from '../../data/trades'
+import { loadTrade } from '../../data/trades'
+import type { Fill, StopChange } from '../../data/types'
+import { PencilIcon } from '../../ui/icons'
 import { hrefFor } from '../../ui/routes'
 import { GradeBadge, PnlText } from '../../ui/TradeBits'
 import { currencyOf, shortDateTime, STATUS_LABEL } from '../../ui/tradeText'
@@ -13,7 +14,7 @@ import { PlanSheet } from './PlanSheet'
 import { ReviewForm } from './ReviewForm'
 import { StopSheet } from './StopSheet'
 
-type Open = null | { kind: 'plan' } | { kind: 'fill'; side: 'buy' | 'sell' } | { kind: 'stop' }
+type Open = null | { kind: 'plan' } | { kind: 'fill'; side: 'buy' | 'sell'; fill?: Fill } | { kind: 'stop'; move?: StopChange }
 
 export function TradeDetail({ id }: { id: string }) {
   const trade = useRepoQuery((r) => loadTrade(r, id), [id])
@@ -36,6 +37,7 @@ export function TradeDetail({ id }: { id: string }) {
   const inSide = entrySide(p.direction)
   const outSide = inSide === 'buy' ? 'sell' : 'buy'
   const close = () => setOpen(null)
+  const hasStages = trade.fills.some((f) => f.pyramid_stage)
 
   return (
     <>
@@ -121,15 +123,15 @@ export function TradeDetail({ id }: { id: string }) {
             </div>
             {trade.fills.length ? (
               <div className="table-wrap">
-                <table className="table">
+                <table className="table fills-table">
                   <thead>
                     <tr>
                       <th>일시</th>
                       <th>구분</th>
                       <th className="r">가격</th>
                       <th className="r">수량</th>
-                      <th>단계</th>
-                      <th aria-label="삭제" />
+                      {hasStages && <th>단계</th>}
+                      <th aria-label="수정" />
                     </tr>
                   </thead>
                   <tbody>
@@ -139,9 +141,11 @@ export function TradeDetail({ id }: { id: string }) {
                         <td className={f.side === 'buy' ? 'profit' : 'loss'}>{f.side === 'buy' ? '매수' : '매도'}</td>
                         <td className="num r">{formatPrice(f.price, currency)}</td>
                         <td className="num r">{f.qty.toLocaleString()}</td>
-                        <td>{f.side === inSide ? (f.pyramid_stage ? `${f.pyramid_stage}차` : '') : ''}</td>
+                        {hasStages && <td>{f.side === inSide && f.pyramid_stage ? `${f.pyramid_stage}차` : ''}</td>}
                         <td className="r">
-                          <DeleteFill tradeTicker={p.ticker} fillId={f.id} />
+                          <button type="button" className="icon-btn small-icon edit-btn" aria-label={`${shortDateTime(f.ts)} ${f.side === 'buy' ? '매수' : '매도'} 수정`} onClick={() => setOpen({ kind: 'fill', side: f.side, fill: f })}>
+                            <PencilIcon size={15} />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -190,15 +194,22 @@ export function TradeDetail({ id }: { id: string }) {
             </p>
             {trade.stops.length > 0 && (
               <ul className="log">
-                {trade.stops.map((m) => (
-                  <li key={m.id}>
-                    <span className="num faint">{shortDateTime(m.ts)}</span>
-                    <span className="num">
-                      {m.old_stop ? formatPrice(m.old_stop, currency) : '—'} → {formatPrice(m.new_stop, currency)}
-                    </span>
-                    {m.reason && <span className="log-detail">{m.reason}</span>}
-                  </li>
-                ))}
+                {trade.stops.map((m, i) => {
+                  // The stop it replaced, in time order (a move recorded later may sit in between).
+                  const prev = i > 0 ? trade.stops[i - 1].new_stop : (p.original_stop ?? null)
+                  return (
+                    <li key={m.id}>
+                      <span className="num faint">{shortDateTime(m.ts)}</span>
+                      <span className="num">
+                        {prev ? formatPrice(prev, currency) : '—'} → {formatPrice(m.new_stop, currency)}
+                      </span>
+                      {m.reason && <span className="log-detail">{m.reason}</span>}
+                      <button type="button" className="icon-btn small-icon edit-btn push-right" aria-label={`${shortDateTime(m.ts)} 손절 이동 수정`} onClick={() => setOpen({ kind: 'stop', move: m })}>
+                        <PencilIcon size={15} />
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </section>
@@ -217,8 +228,8 @@ export function TradeDetail({ id }: { id: string }) {
       </div>
 
       {open?.kind === 'plan' && <PlanSheet trade={trade} onClose={close} />}
-      {open?.kind === 'fill' && <FillSheet trade={trade} side={open.side} onClose={close} />}
-      {open?.kind === 'stop' && <StopSheet trade={trade} onClose={close} />}
+      {open?.kind === 'fill' && <FillSheet key={open.fill?.id ?? open.side} trade={trade} side={open.side} fill={open.fill} onClose={close} />}
+      {open?.kind === 'stop' && <StopSheet key={open.move?.id ?? 'new'} trade={trade} move={open.move} onClose={close} />}
     </>
   )
 }
@@ -229,21 +240,5 @@ function Tile({ label, value }: { label: string; value: string }) {
       <dt>{label}</dt>
       <dd className="num">{value}</dd>
     </div>
-  )
-}
-
-function DeleteFill({ fillId, tradeTicker }: { fillId: string; tradeTicker: string }) {
-  const repo = useData((s) => s.repo)
-  return (
-    <button
-      type="button"
-      className="icon-btn small-icon"
-      aria-label="이 체결 삭제"
-      onClick={() => {
-        if (repo && window.confirm(`${tradeTicker} 체결 1건을 삭제할까요?`)) void removeFill(repo, fillId)
-      }}
-    >
-      ✕
-    </button>
   )
 }
