@@ -11,6 +11,7 @@ import { prepareImage } from './image'
 import { postChartDays } from './postChart'
 import { todayKst } from '../calendar/calText'
 import { Viewer } from './Viewer'
+import type { AutoResult } from './autoRun'
 
 
 function imageFiles(list: FileList | DataTransferItemList | null | undefined): File[] {
@@ -85,6 +86,22 @@ export function Chartbook({ trade }: { trade: TradeBundle }) {
       setError(e instanceof Error ? `이미지를 처리하지 못했습니다: ${e.message}` : '이미지를 처리하지 못했습니다.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const getChartBars = useData((s) => s.getChartBars)
+  const [auto, setAuto] = useState<{ running: boolean; progress: string; result: AutoResult | null }>({ running: false, progress: '', result: null })
+  async function runAuto() {
+    if (!uploads || auto.running) return
+    setAuto({ running: true, progress: '준비 중…', result: null })
+    setError(null)
+    try {
+      const { makeAutoCharts } = await import('./autoRun')
+      const result = await makeAutoCharts(trade, pending, uploads, getChartBars, (progress) => setAuto((a) => ({ ...a, progress })))
+      setAuto({ running: false, progress: '', result })
+    } catch (e) {
+      setAuto({ running: false, progress: '', result: null })
+      setError(e instanceof Error ? `자동 차트를 만들지 못했습니다: ${e.message}` : '자동 차트를 만들지 못했습니다.')
     }
   }
 
@@ -246,6 +263,38 @@ export function Chartbook({ trade }: { trade: TradeBundle }) {
         </div>
         <p className="help" style={{ margin: 0 }}>
           캡처 후 이 화면에서 Ctrl+V(⌘V)로 붙여넣거나, 이미지를 슬롯에 끌어다 놓으세요.
+        </p>
+      </div>
+
+      <div className="field">
+        <div className="row wrap">
+          <span className="field-label">자동 차트</span>
+          <button type="button" className="btn btn-secondary push-right" onClick={() => void runAuto()} disabled={!configured || auto.running || !trade.fills.length}>
+            {auto.running ? '만드는 중…' : '자동 차트 만들기'}
+          </button>
+        </div>
+        <p className="help" style={{ margin: 0 }}>
+          {configured
+            ? '빈 슬롯만 채웁니다. ①·③·④ 일봉(10 SMA · 21 EMA · 200 SMA), ② 진입일 5분봉(VWAP) — 분봉은 진입 후 약 60일까지만.'
+            : '설정에서 백엔드를 연결하면 시세로 차트를 그려 넣을 수 있습니다.'}
+        </p>
+        {auto.running && (
+          <p className="help" role="status" style={{ margin: 0 }}>
+            {auto.progress}
+          </p>
+        )}
+        {auto.result && (
+          <div className={`notice ${auto.result.failed.length ? 'notice-warn' : 'notice-good'}`} role="status">
+            {auto.result.made.length ? `만듦: ${auto.result.made.join(', ')}` : '새로 만든 차트가 없습니다.'}
+            {[...auto.result.failed.map((f) => `실패 — ${f}`), ...auto.result.skipped.map((s) => `건너뜀 — ${s}`)].map((line) => (
+              <div key={line} className="help" style={{ margin: 0 }}>
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="help" style={{ margin: 0 }}>
+          차트: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView Lightweight Charts™</a> Copyright (c) 2026 TradingView, Inc. · 시세 Yahoo Finance
         </p>
       </div>
 

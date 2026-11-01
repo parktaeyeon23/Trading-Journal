@@ -50,6 +50,7 @@ PRD와 단계별 프롬프트: "ALPHA JOURNAL — 장기 사용 투자일지 앱
   - 모든 쓰기는 IndexedDB + outbox에 같은 트랜잭션으로 들어가고, 삭제는 `deleted=true` 소프트 삭제.
   - 엔티티·필드 이름은 `gas/Config.js`와 `src/data/types.ts`가 같아야 한다 (서버는 모르는 필드를 거부). 필드 추가는 둘 다 고친다.
 - 차트 이미지는 `src/data/uploads.ts`의 `UploadQueue`로만 올린다 (기기에 먼저 저장 → 업로드 성공 시 ChartImages 행). TradingView 링크·삭제는 `src/data/charts.ts`·`repo.remove`. 복기 저장에는 ③ 청산 차트(대기 중 포함)가 필요하다.
+  - 자동 차트: 창·지표는 `src/core/chartData.ts`(`planCharts`·`sma`·`ema`·`sessionVwap`), 그리기는 `src/features/chartbook/autoChart.ts`(Lightweight Charts, 동적 import), 봉은 GAS `getChartBars`(저장 안 함). 빈 슬롯만 채우고 결과는 UploadQueue로. Lightweight Charts 저작권 표기·TradingView 링크는 차트북 화면에서 지우지 않는다.
 - 캘린더 손익은 청산 체결 단위로 그 시장의 거래일(KR 서울, US 뉴욕 날짜)에 넣는다 (`src/core/calendar.ts`). 원화 환산은 체결일 USD/KRW(MarketCache `IDX:USDKRW`), 환율이 없으면 추측하지 않고 "환산 불가"로 센다.
   - 캘린더·분석 공용 필터(시장·셋업·태그·단위·기준일)는 `src/ui/filterStore.ts`.
   - 일간 노트 id `note-<날짜>`, 주간 리뷰 id `week-<월요일>` 고정 (`src/data/notes.ts`).

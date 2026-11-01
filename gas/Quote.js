@@ -36,14 +36,47 @@ function getBars_(symbol, market, from, to) {
   var data = null
   for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i], { period1: p1, period2: p2 })
   if (!data) throw apiError_('quote_not_found', '시세를 찾지 못했습니다: ' + symbol)
-  var bars = data.bars.filter(function (b) {
-    return b.date >= from && b.date <= to
-  })
+  var bars = data.bars
+    .filter(function (b) {
+      return b.date >= from && b.date <= to
+    })
+    .map(ohlc_)
   var cacheSymbol = market + ':' + symbol.trim().toUpperCase()
   withLock_(function () {
     cacheBars_(cacheSymbol, bars)
   })
   return { ok: true, cacheSymbol: cacheSymbol, count: bars.length, bars: bars }
+}
+
+/** Bar sizes the chartbook pictures use, and the longest window each may ask for. */
+var CHART_INTERVALS = { '1d': 800, '5m': 7, '15m': 7, '60m': 30 }
+
+/**
+ * Bars with volume for drawing a chart picture (not cached: the picture is what
+ * gets kept). Intraday bars exist only for recent sessions (Yahoo keeps 5m for
+ * about 60 days); older windows answer quote_not_found.
+ * Request: { action: "getChartBars", symbol, market: "KR"|"US", from, to, interval: "1d"|"5m"|"15m"|"60m" }
+ * Response: { ok, interval, gmtoffset, bars: [{ t, date, open, high, low, close, volume }] }
+ */
+function getChartBars_(symbol, market, from, to, interval) {
+  if (typeof symbol !== 'string' || !symbol.trim()) throw apiError_('bad_request', 'symbol is required.')
+  if (market !== 'KR' && market !== 'US') throw apiError_('bad_request', 'market must be KR or US.')
+  if (!CHART_INTERVALS[interval]) throw apiError_('bad_request', 'interval must be 1d, 5m, 15m or 60m.')
+  var re = /^\d{4}-\d{2}-\d{2}$/
+  if (!re.test(from || '') || !re.test(to || '') || from > to) throw apiError_('bad_request', 'from/to must be YYYY-MM-DD with from <= to.')
+  var p1 = Date.parse(from + 'T00:00:00Z') / 1000 - 86400
+  var p2 = Date.parse(to + 'T00:00:00Z') / 1000 + 2 * 86400
+  if ((p2 - p1) / 86400 > CHART_INTERVALS[interval] + 3) throw apiError_('bad_request', 'window is too long for ' + interval + '.')
+  var candidates = yahooSymbols_(symbol.trim().toUpperCase(), market)
+  var data = null
+  for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i], { period1: p1, period2: p2 }, interval)
+  var bars = data
+    ? data.bars.filter(function (b) {
+        return b.date >= from && b.date <= to
+      })
+    : []
+  if (!bars.length) throw apiError_('quote_not_found', interval === '1d' ? '시세를 찾지 못했습니다: ' + symbol : '이 날짜의 분봉이 없습니다 (Yahoo는 분봉을 약 60일만 보관): ' + symbol + ' ' + from)
+  return { ok: true, interval: interval, gmtoffset: data.gmtoffset, bars: bars }
 }
 
 function getQuote_(symbol, market, range) {
@@ -54,7 +87,7 @@ function getQuote_(symbol, market, range) {
   for (var i = 0; i < candidates.length && !data; i++) data = fetchDailyBars_(candidates[i], range || QUOTE_RANGE)
   if (!data) throw apiError_('quote_not_found', '시세를 찾지 못했습니다: ' + symbol + (market === 'KR' ? ' (KR은 6자리 종목코드로 입력)' : ''))
 
-  var bars = range ? data.bars : data.bars.slice(-QUOTE_MAX_BARS)
+  var bars = (range ? data.bars : data.bars.slice(-QUOTE_MAX_BARS)).map(ohlc_)
   var cacheSymbol = market + ':' + symbol.trim().toUpperCase()
   withLock_(function () {
     cacheBars_(cacheSymbol, bars)
@@ -87,9 +120,9 @@ function yahooSymbols_(symbol, market) {
  *   null when the source has no such symbol; throws quote_failed when the source is unreachable.
  */
 /** @param {string|{period1: number, period2: number}=} range a Yahoo range ('3mo') or an epoch-second window. */
-function fetchDailyBars_(yahooSymbol, range) {
+function fetchDailyBars_(yahooSymbol, range, interval) {
   var span = range && typeof range === 'object' ? 'period1=' + Math.floor(range.period1) + '&period2=' + Math.floor(range.period2) : 'range=' + (range || QUOTE_RANGE)
-  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?' + span + '&interval=1d'
+  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yahooSymbol) + '?' + span + '&interval=' + (interval || '1d')
   var res
   try {
     res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0' } })
@@ -120,16 +153,25 @@ function fetchDailyBars_(yahooSymbol, range) {
       high: round_(q.high[i]),
       low: round_(q.low[i]),
       close: round_(q.close[i]),
+      // Bar start (epoch seconds) and volume: used by chart pictures, not stored in MarketCache.
+      t: t,
+      volume: q.volume && typeof q.volume[i] === 'number' ? q.volume[i] : null,
     })
   })
   if (!bars.length) return null
   return {
+    gmtoffset: offsetSec,
     symbol: yahooSymbol,
     name: meta.longName || meta.shortName || null,
     currency: meta.currency || null,
     price: typeof meta.regularMarketPrice === 'number' ? round_(meta.regularMarketPrice) : null,
     bars: bars,
   }
+}
+
+/** Daily bar as getQuote/getBars have always answered it (date + OHLC). */
+function ohlc_(b) {
+  return { date: b.date, open: b.open, high: b.high, low: b.low, close: b.close }
 }
 
 function round_(v) {

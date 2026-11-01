@@ -44,6 +44,8 @@ function handleRequest(req) {
         return getQuote_(req.symbol, req.market)
       case 'getBars':
         return getBars_(req.symbol, req.market, req.from, req.to)
+      case 'getChartBars':
+        return getChartBars_(req.symbol, req.market, req.from, req.to, req.interval)
       case 'uploadImage':
         return uploadImage_(req)
       case 'upsert':

@@ -4,6 +4,8 @@ import {
   type BackendErrorCode,
   type PullResult,
   type QuoteResult,
+  type ChartBarsResult,
+  type ChartInterval,
   type QuoteMarket,
   type UploadImageRequest,
   type UpsertOp,
@@ -102,6 +104,11 @@ export class GasAdapter implements BackendAdapter {
   async getQuote(symbol: string, market: QuoteMarket): Promise<QuoteResult> {
     const r = await this.call<QuoteResult>('getQuote', { symbol, market })
     return { symbol: r.symbol, cacheSymbol: r.cacheSymbol, name: r.name, currency: r.currency, price: r.price, asOf: r.asOf, bars: r.bars }
+  }
+
+  async getChartBars(symbol: string, market: 'KR' | 'US', from: string, to: string, interval: ChartInterval): Promise<ChartBarsResult> {
+    const r = await this.call<ChartBarsResult>('getChartBars', { symbol, market, from, to, interval })
+    return { interval: r.interval, gmtoffset: r.gmtoffset, bars: r.bars }
   }
 
   async getBars(symbol: string, market: 'KR' | 'US', from: string, to: string) {

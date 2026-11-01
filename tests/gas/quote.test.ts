@@ -143,3 +143,29 @@ describe('getBars', () => {
     expect(api({ action: 'getBars', symbol: 'NOPE', market: 'US', from: '2026-09-01', to: '2026-09-02' }).error.code).toBe('quote_not_found')
   })
 })
+
+describe('getChartBars', () => {
+  it('returns bars with time and volume for pictures, without caching them', () => {
+    const body = JSON.parse(chart('CRDO', -14400, [
+      ['2026-10-06', 72, 74, 71, 73],
+      ['2026-10-07', 73, 75, 72, 74],
+    ])[1])
+    body.chart.result[0].indicators.quote[0].volume = [1000, 2500]
+    gas.http.routes.set(YAHOO + 'CRDO', [200, JSON.stringify(body)])
+    const r = api({ action: 'getChartBars', symbol: 'CRDO', market: 'US', from: '2026-10-07', to: '2026-10-07', interval: '5m' })
+    expect(r).toMatchObject({ ok: true, interval: '5m', gmtoffset: -14400 })
+    expect(r.bars).toEqual([{ date: '2026-10-07', open: 73, high: 75, low: 72, close: 74, t: Date.parse('2026-10-07T00:00:00Z') / 1000 + 14400, volume: 2500 }])
+    expect(gas.http.requests.at(-1)).toMatch(/interval=5m/)
+    expect(api({ action: 'pullAll' }).data.MarketCache ?? []).toHaveLength(0)
+  })
+
+  it('explains missing intraday data and refuses bad requests', () => {
+    gas.http.routes.set(YAHOO + 'CRDO', chart('CRDO', -14400, [['2026-10-06', 72, 74, 71, 73]]))
+    const old = api({ action: 'getChartBars', symbol: 'CRDO', market: 'US', from: '2026-08-01', to: '2026-08-01', interval: '5m' })
+    expect(old.error.code).toBe('quote_not_found')
+    expect(old.error.message).toMatch(/60일/)
+    expect(api({ action: 'getChartBars', symbol: 'CRDO', market: 'US', from: '2026-10-01', to: '2026-10-07', interval: '1m' }).error.code).toBe('bad_request')
+    expect(api({ action: 'getChartBars', symbol: 'CRDO', market: 'US', from: '2026-09-01', to: '2026-10-07', interval: '5m' }).error.code).toBe('bad_request')
+    expect(api({ action: 'getChartBars', symbol: 'CRDO', market: 'US', from: '2024-01-01', to: '2026-10-07', interval: '1d' }).error.code).toBe('bad_request')
+  })
+})

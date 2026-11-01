@@ -83,6 +83,29 @@ export interface BackendAdapter {
   uploadImage(req: UploadImageRequest): Promise<BaseRow>
   /** Daily bars for a date window, cached server-side in MarketCache (synced to every device). */
   getBars(symbol: string, market: 'KR' | 'US', from: string, to: string): Promise<{ cacheSymbol: string; count: number }>
+  /** Bars with volume for a chart picture; not cached anywhere. Intraday only for recent sessions. */
+  getChartBars(symbol: string, market: 'KR' | 'US', from: string, to: string, interval: ChartInterval): Promise<ChartBarsResult>
+}
+
+export type ChartInterval = '1d' | '5m' | '15m' | '60m'
+
+export interface ChartBar {
+  /** Bar start, epoch seconds. */
+  t: number
+  /** Exchange-local calendar date. */
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number | null
+}
+
+export interface ChartBarsResult {
+  interval: ChartInterval
+  /** Exchange offset from UTC in seconds (for showing intraday times in exchange time). */
+  gmtoffset: number
+  bars: ChartBar[]
 }
 
 export type BackendErrorCode =

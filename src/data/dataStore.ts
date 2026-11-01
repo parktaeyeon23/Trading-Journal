@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { BackendError, type BackendAdapter, type QuoteMarket, type QuoteResult } from './backend'
+import { BackendError, type BackendAdapter, type ChartBarsResult, type ChartInterval, type QuoteMarket, type QuoteResult } from './backend'
 import { openAppDb } from './db'
 import { GasAdapter, type GasConfig } from './gasAdapter'
 import { LocalRepo } from './repo'
@@ -24,6 +24,7 @@ interface DataState {
   getQuote: (symbol: string, market: QuoteMarket) => Promise<QuoteResult>
   /** Bars for a closed trade's window; they arrive locally with the next sync pull. */
   getBars: (symbol: string, market: 'KR' | 'US', from: string, to: string) => Promise<{ cacheSymbol: string; count: number }>
+  getChartBars: (symbol: string, market: 'KR' | 'US', from: string, to: string, interval: ChartInterval) => Promise<ChartBarsResult>
 }
 
 let initPromise: Promise<void> | null = null
@@ -79,6 +80,12 @@ export const useData = create<DataState>((set, get) => ({
     const adapter = makeAdapter(get().config)
     if (!adapter) throw new BackendError('not_setup', '설정에서 백엔드를 먼저 연결하세요.')
     return adapter.getBars(symbol, market, from, to)
+  },
+
+  getChartBars: async (symbol, market, from, to, interval) => {
+    const adapter = makeAdapter(get().config)
+    if (!adapter) throw new BackendError('not_setup', '설정에서 백엔드를 먼저 연결하세요.')
+    return adapter.getChartBars(symbol, market, from, to, interval)
   },
 
   getQuote: async (symbol, market) => {

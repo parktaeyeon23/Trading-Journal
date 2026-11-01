@@ -65,6 +65,8 @@ ALPHA JOURNAL의 데이터 API. 데이터는 새 스프레드시트 "ALPHA JOURN
 
 `getBars`: `{ "action": "getBars", "symbol": "CRDO", "market": "US", "from": "2026-09-01", "to": "2026-09-30" }` — 청산된 트레이드의 보유 기간 일봉(MFE/MAE 계산용)을 받아 MarketCache에 저장한다. 최대 800일 구간.
 
+`getChartBars`: `{ "action": "getChartBars", "symbol": "042700", "market": "KR", "from": "2026-10-05", "to": "2026-10-05", "interval": "5m" }` — 차트북 자동 차트용 봉(시각 `t`·거래량 포함)과 거래소 `gmtoffset`. 저장하지 않는다. interval `1d`(최대 800일)·`5m`·`15m`(7일)·`60m`(30일). Yahoo는 분봉을 약 60일만 보관하므로 그보다 오래된 날짜는 `quote_not_found`.
+
 `getQuote`에 `market: "IDX"`를 주면 지수·환율 시리즈를 돌려준다: `KOSPI`, `KOSDAQ`, `SPX`, `NASDAQ`, `USDKRW` (MarketCache id `IDX:USDKRW|2026-10-07` 형식).
 
 `getQuote`: KR은 6자리 종목코드를 코스피(.KS) → 코스닥(.KQ) 순으로 찾는다. 약 3개월 일봉을 돌려주고 MarketCache(`KR:042700|2026-10-07` 같은 id)에 저장해 모든 기기로 동기화한다. 값이 같은 봉은 다시 쓰지 않는다.
