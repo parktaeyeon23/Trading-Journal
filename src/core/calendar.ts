@@ -29,6 +29,26 @@ export function tradeDate(ts: string, market: CalMarket): string {
   return f.format(new Date(ts))
 }
 
+const offsetFmtCache = new Map<string, Intl.DateTimeFormat>()
+
+/**
+ * The market's offset from UTC (seconds) at an instant, daylight saving included
+ * (New York is −4h in summer, −5h in winter; Seoul is always +9h).
+ */
+export function zoneOffsetSec(epochSec: number, market: CalMarket): number {
+  const zone = ZONES[market]
+  let f = offsetFmtCache.get(zone)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    offsetFmtCache.set(zone, f)
+  }
+  const at = Math.floor(epochSec) * 1000
+  const v: Record<string, number> = {}
+  for (const part of f.formatToParts(new Date(at))) if (part.type !== 'literal') v[part.type] = Number(part.value)
+  const wall = Date.UTC(v.year, v.month - 1, v.day, v.hour, v.minute, v.second)
+  return Math.round((wall - at) / 1000)
+}
+
 // ---------- dates (YYYY-MM-DD, calendar arithmetic in UTC) ----------
 
 const DAY = 86400000

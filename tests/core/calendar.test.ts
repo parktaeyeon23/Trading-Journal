@@ -10,6 +10,7 @@ import {
   sumDays,
   summarizePeriod,
   tradeDate,
+  zoneOffsetSec,
   tradeEvents,
   weekStart,
   weekdayMon0,
@@ -29,6 +30,23 @@ describe('tradeDate', () => {
     expect(tradeDate('2026-10-08T17:00:00.000Z', 'KR')).toBe('2026-10-09')
     // 09:30 KST is still the previous UTC day
     expect(tradeDate('2026-10-07T00:30:00.000Z', 'KR')).toBe('2026-10-07')
+  })
+})
+
+describe('zoneOffsetSec', () => {
+  const at = (iso: string) => Date.parse(iso) / 1000
+  it('follows New York daylight saving per instant, not today', () => {
+    expect(zoneOffsetSec(at('2026-10-30T13:30:00Z'), 'US')).toBe(-4 * 3600) // 09:30 EDT
+    expect(zoneOffsetSec(at('2026-11-02T14:30:00Z'), 'US')).toBe(-5 * 3600) // 09:30 EST
+    expect(zoneOffsetSec(at('2026-03-09T13:30:00Z'), 'US')).toBe(-4 * 3600) // after the March switch
+  })
+  it('switches at 2am New York time on the change days', () => {
+    expect(zoneOffsetSec(at('2026-11-01T05:59:59Z'), 'US')).toBe(-4 * 3600)
+    expect(zoneOffsetSec(at('2026-11-01T06:00:00Z'), 'US')).toBe(-5 * 3600)
+  })
+  it('Seoul is always +9h', () => {
+    expect(zoneOffsetSec(at('2026-07-01T00:00:00Z'), 'KR')).toBe(9 * 3600)
+    expect(zoneOffsetSec(at('2026-12-01T00:00:00Z'), 'KR')).toBe(9 * 3600)
   })
 })
 

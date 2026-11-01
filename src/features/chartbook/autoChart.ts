@@ -6,6 +6,7 @@
  * Intraday (entry day): 5-minute candles, volume, session VWAP, fills, original stop.
  */
 import type { ChartBar } from '../../data/backend'
+import { zoneOffsetSec, type CalMarket } from '../../core/calendar'
 import { ema, sessionVwap, sma, type FillMark } from '../../core/chartData'
 
 export interface ChartPicture {
@@ -13,8 +14,8 @@ export interface ChartPicture {
   title: string
   subtitle: string
   bars: ChartBar[]
-  /** Exchange offset from UTC (s): intraday times are shown in exchange time. */
-  gmtoffset: number
+  /** Intraday times are shown in this market's exchange time (daylight saving per bar). */
+  market: CalMarket
   showFrom: string
   showTo: string
   marks: FillMark[]
@@ -68,8 +69,10 @@ export async function renderChartPng(p: ChartPicture): Promise<Blob> {
     })
 
     // Daily bars are keyed by date; intraday by exchange-local seconds so the axis reads exchange time.
-    const timeOf = (b: ChartBar) => (p.kind === 'daily' ? b.date : ((b.t + p.gmtoffset) as number))
-    const markTime = (m: FillMark) => (p.kind === 'daily' ? (m.at as string) : (((m.at as number) + p.gmtoffset) as number))
+    // The offset is taken per bar: Yahoo's gmtoffset is today's, which is an hour off for a US day on the other side of daylight saving.
+    const local = (sec: number) => sec + zoneOffsetSec(sec, p.market)
+    const timeOf = (b: ChartBar) => (p.kind === 'daily' ? b.date : (local(b.t) as number))
+    const markTime = (m: FillMark) => (p.kind === 'daily' ? (m.at as string) : (local(m.at as number) as number))
     type T = Parameters<typeof candles.setData>[0][number]['time']
 
     const fmt = { type: 'price' as const, precision: p.precision, minMove: 1 / 10 ** p.precision }

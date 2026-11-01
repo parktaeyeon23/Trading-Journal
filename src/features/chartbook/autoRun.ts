@@ -69,7 +69,7 @@ export async function makeAutoCharts(trade: TradeBundle, pending: PendingUpload[
         title: `${name} · ${slotLabel(job.slot === 'free' ? 'entry' : job.slot)}${job.slot === 'free' ? ' (추가 진입일)' : ''}`,
         subtitle: job.kind === 'daily' ? `일봉 ${job.showFrom} ~ ${job.showTo}` : `5분봉 ${job.date} · 거래소 시각 · VWAP`,
         bars: res.bars,
-        gmtoffset: res.gmtoffset ?? 0,
+        market: p.market,
         showFrom: job.showFrom,
         showTo: job.showTo,
         marks,
