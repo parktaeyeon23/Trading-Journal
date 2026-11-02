@@ -8,11 +8,13 @@ import type { PositionStatus } from '../../data/types'
 import { GradeBadge, PnlText } from '../../ui/TradeBits'
 import { hrefFor } from '../../ui/routes'
 import { currencyOf, shortDateTime } from '../../ui/tradeText'
+import { useMedia } from '../../ui/useMedia'
 import { useRepoQuery } from '../../ui/useRepoQuery'
 import { useRoute } from '../../ui/useRoute'
 import { FillSheet } from './FillSheet'
 import { PlanSheet } from './PlanSheet'
 import { TradeDetail } from './TradeDetail'
+import { stopOutR } from './stopOut'
 
 const SECTIONS: { status: PositionStatus; title: string; empty?: string }[] = [
   { status: 'review_pending', title: '복기 대기' },
@@ -52,6 +54,7 @@ function TradeList() {
     }
   }
 
+  const wide = useMedia('(min-width: 900px)')
   const byStatus = (s: PositionStatus) =>
     (trades ?? [])
       .filter((t) => t.position.status === s)
@@ -99,11 +102,26 @@ function TradeList() {
               <h2 id={`sec-${status}`} className="list-title">
                 {title} <span className={status === 'review_pending' ? 'count-alert' : 'faint'}>{list.length}</span>
               </h2>
-              <div className="trade-list">
-                {shown.map((t) => (
-                  <TradeCard key={t.position.id} t={t} />
-                ))}
-              </div>
+              {wide ? (
+                <div className="trade-table" role="table" aria-labelledby={`sec-${status}`}>
+                  <div className="trade-row trade-row-head" role="row">
+                    {COLUMNS[status].map((c, i) => (
+                      <span key={i} role="columnheader">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                  {shown.map((t) => (
+                    <TradeRow key={t.position.id} t={t} />
+                  ))}
+                </div>
+              ) : (
+                <div className="trade-list">
+                  {shown.map((t) => (
+                    <TradeCard key={t.position.id} t={t} />
+                  ))}
+                </div>
+              )}
               {status === 'done' && list.length > doneShown && (
                 <button type="button" className="btn btn-secondary" onClick={() => setDoneShown((n) => n + DONE_PAGE)}>
                   더 보기 ({list.length - doneShown})
@@ -117,6 +135,63 @@ function TradeList() {
       {sheet === 'plan' && <PlanSheet onClose={() => setSheet(null)} />}
       {sheet === 'fill' && <FillSheet onClose={() => setSheet(null)} />}
     </>
+  )
+}
+
+/** Desktop table headers per section: ticker · setup · flags · detail · when · grade · R · money. */
+const COLUMNS: Record<PositionStatus, string[]> = {
+  review_pending: ['종목', '셋업', '', '상태', '청산', '', 'R', '손익'],
+  open: ['종목', '셋업', '', '보유', '손절', '', '손절 시', ''],
+  planned: ['종목', '셋업', '', '계획 진입 / 손절', '수량', '', '', ''],
+  done: ['종목', '셋업', '', '규칙', '청산', '등급', 'R', '손익'],
+}
+
+function TradeRow({ t }: { t: TradeBundle }) {
+  const p = t.position
+  const s = t.summary
+  const currency = currencyOf(p.market)
+  const checklist = (t.review?.checklist ?? null) as Record<string, boolean> | null
+  const rules = checklist ? Object.values(checklist) : null
+  const last = t.fills.at(-1)
+  const postDays = postChartDays(t, todayKst())
+  const closed = p.status === 'review_pending' || p.status === 'done'
+  const price = (n: number | null | undefined) => (n ? formatPrice(n, currency) : '—')
+
+  return (
+    <a className="trade-row" role="row" href={hrefFor('trades', p.id)}>
+      <span className="tr-ticker" role="cell">
+        <b>{p.ticker}</b>
+        <span className="faint small">
+          {p.market} · {p.direction === 'long' ? '롱' : '숏'}
+        </span>
+      </span>
+      <span className="small" role="cell">
+        {p.setup ?? <span className="faint">—</span>}
+      </span>
+      <span className="tr-flags" role="cell">
+        {p.no_plan && <span className="chip chip-bad">무계획</span>}
+        {postDays !== null && <span className="chip chip-warn">사후 차트</span>}
+      </span>
+      <span className="small num" role="cell">
+        {p.status === 'open'
+          ? `${s.pnl.openQty.toLocaleString()}주 @ ${price(s.pnl.avgCost)}`
+          : p.status === 'planned'
+            ? `${price(t.plan?.plan_entry)} / ${price(p.original_stop)}`
+            : rules
+              ? `${rules.filter(Boolean).length}/${rules.length}`
+              : <span className="chip chip-warn">복기 전</span>}
+      </span>
+      <span className="small num faint" role="cell">
+        {p.status === 'open' ? price(t.currentStop) : p.status === 'planned' ? `${t.plan?.plan_qty ?? '—'}주` : last ? shortDateTime(last.ts) : ''}
+      </span>
+      <span role="cell">{closed && <GradeBadge grade={t.review?.grade} />}</span>
+      <span className="tr-num" role="cell">
+        {closed ? <PnlText value={s.r} kind="r" className="strong" /> : p.status === 'open' ? <PnlText value={stopOutR(t)} kind="r" /> : null}
+      </span>
+      <span className="tr-num" role="cell">
+        {closed && <PnlText value={s.pnl.realizedNet} kind="money" currency={currency} />}
+      </span>
+    </a>
   )
 }
 
@@ -158,6 +233,12 @@ function TradeCard({ t }: { t: TradeBundle }) {
       </div>
       <div className="trade-card-side">
         <GradeBadge grade={t.review?.grade} />
+        {p.status === 'open' && (
+          <>
+            <PnlText value={stopOutR(t)} kind="r" className="strong" />
+            <span className="small faint">손절 시</span>
+          </>
+        )}
         {(p.status === 'review_pending' || p.status === 'done') && (
           <>
             <PnlText value={s.r} kind="r" className="strong" />

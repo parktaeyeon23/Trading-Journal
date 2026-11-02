@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { excursion, oneR, openRiskPct, rMultiple } from '../../src/core/risk'
+import { excursion, oneR, openRiskPct, rMultiple, stopOutR } from '../../src/core/risk'
 import type { PnlFill } from '../../src/core/pnl'
 
 const buy = (id: string, ts: string, price: number, qty: number, stage?: number): PnlFill => ({ id, ts, side: 'buy', price, qty, pyramid_stage: stage })
@@ -71,5 +71,27 @@ describe('openRiskPct', () => {
     ])
     expect(r.pct).toBeCloseTo(1.24667 + 1.248 + 1, 4)
     expect(r.withoutStop).toBe(1)
+  })
+})
+
+describe('stopOutR', () => {
+  const base = { direction: 'long' as const, realizedNet: 0, openQty: 86, avgCost: 144.3412, currentStop: 136.06, oneR: 367.08 }
+  it('long: open qty closed at the current stop, in R (pyramided size can exceed −1R)', () => {
+    expect(stopOutR(base)).toBeCloseTo((-8.2812 * 86) / 367.08, 6)
+    expect(stopOutR(base)!).toBeLessThan(-1.9)
+  })
+  it('adds realized P&L from partial exits', () => {
+    expect(stopOutR({ ...base, realizedNet: 367.08 })).toBeCloseTo(1 + (-8.2812 * 86) / 367.08, 6)
+  })
+  it('stop above average cost = profit locked in', () => {
+    expect(stopOutR({ ...base, openQty: 10, avgCost: 100, currentStop: 110, oneR: 50 })).toBe(2)
+  })
+  it('short: loss when the stop is above the average', () => {
+    expect(stopOutR({ ...base, direction: 'short', openQty: 10, avgCost: 100, currentStop: 105, oneR: 50 })).toBe(-1)
+  })
+  it('null without 1R, stop, or open quantity', () => {
+    expect(stopOutR({ ...base, oneR: null })).toBeNull()
+    expect(stopOutR({ ...base, currentStop: null })).toBeNull()
+    expect(stopOutR({ ...base, openQty: 0 })).toBeNull()
   })
 })

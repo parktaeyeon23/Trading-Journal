@@ -99,3 +99,23 @@ export function openRiskPct(items: OpenRiskItem[]): { pct: number; withoutStop: 
   }
   return { pct, withoutStop }
 }
+
+/**
+ * Total R if the rest of the position is stopped out now: realized net so far plus the
+ * open quantity closed at the current stop. Fees on that remaining exit are not included.
+ * Negative = the position would end as a loss; above 0 = profit already locked in.
+ * null without 1R, without a stop, or with nothing open.
+ */
+export function stopOutR(args: {
+  direction: Direction
+  realizedNet: number
+  openQty: number
+  avgCost: number
+  currentStop: number | null | undefined
+  oneR: number | null
+}): number | null {
+  const { direction, realizedNet, openQty, avgCost, currentStop, oneR: r1 } = args
+  if (!r1 || !(r1 > 0) || !currentStop || !(currentStop > 0) || !(openQty > 0)) return null
+  const sign = direction === 'long' ? 1 : -1
+  return (realizedNet + sign * (currentStop - avgCost) * openQty) / r1
+}

@@ -229,7 +229,7 @@ export function CalendarScreen() {
                 {md(summary.best.date)} <span className="num profit">{full(summary.best.value, unit)}</span>
               </>
             ) : (
-              '—'
+              <span className="faint">수익일 없음</span>
             )}
             <br />
             {summary.worst ? (
@@ -237,7 +237,7 @@ export function CalendarScreen() {
                 {md(summary.worst.date)} <span className="num loss">{full(summary.worst.value, unit)}</span>
               </>
             ) : (
-              '—'
+              <span className="faint">손실일 없음</span>
             )}
           </span>
         </span>

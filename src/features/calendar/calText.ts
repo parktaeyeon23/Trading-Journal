@@ -25,16 +25,20 @@ export const longDate = (date: string) => `${Number(date.slice(5, 7))}월 ${Numb
 
 /**
  * Heat colour for a day: profit red / loss blue mixed into the surface, stronger
- * the closer the day is to the period's largest day. Text flips to white on strong fills.
+ * the closer the day is to the period's largest day. Two bands so text always
+ * reads at WCAG AA (4.5:1): light tints (8–38%) carry dark --*-strong text, and
+ * the period's big days (top half) get a near-solid fill (86–100%) with --on-pnl text.
+ * Mid mixes (40–80%) fail with either text colour, so they are skipped on purpose.
  */
 export function heatStyle(value: number, maxAbs: number): CSSProperties | undefined {
   const k = intensity(value, maxAbs)
   if (!k) return undefined
-  const pct = Math.round((k * 0.6 + 0.08) * 100)
+  const strong = k > 0.5
+  const pct = Math.round(strong ? 86 + (k - 0.5) * 28 : 8 + k * 60)
   const tone = value > 0 ? 'profit' : 'loss'
   return {
     background: `color-mix(in srgb, var(--${tone}) ${pct}%, var(--surface))`,
-    color: pct > 45 ? 'var(--on-pnl)' : `var(--${tone}-strong)`,
+    color: strong ? 'var(--on-pnl)' : `var(--${tone}-strong)`,
     borderColor: 'transparent',
   }
 }

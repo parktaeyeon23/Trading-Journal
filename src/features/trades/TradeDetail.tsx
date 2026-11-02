@@ -1,3 +1,4 @@
+import { stopOutR } from './stopOut'
 import { useState } from 'react'
 import { formatMoney, formatPct, formatPrice } from '../../core/format'
 import { entrySide } from '../../core/pnl'
@@ -65,11 +66,27 @@ export function TradeDetail({ id }: { id: string }) {
               <GradeBadge grade={trade.review.grade} size="large" />
             </div>
           )}
-          <div className="stat-box">
-            <div className="field-label">{closed ? '결과' : '실현'}</div>
-            <PnlText value={s.r} kind="r" className="stat-big" />
-            <PnlText value={s.pnl.exitQty ? s.pnl.realizedNet : null} kind="money" currency={currency} />
-          </div>
+          {s.pnl.openQty > 0 && (
+            <>
+              <div className="stat-box">
+                <div className="field-label">보유</div>
+                <span className="num stat-big">{s.pnl.openQty.toLocaleString()}주</span>
+                <span className="num small faint">@ {formatPrice(s.pnl.avgCost, currency)}</span>
+              </div>
+              <div className="stat-box">
+                <div className="field-label">손절 시</div>
+                <PnlText value={stopOutR(trade)} kind="r" className="stat-big" />
+                <span className="num small faint">손절 {trade.currentStop ? formatPrice(trade.currentStop, currency) : '—'}</span>
+              </div>
+            </>
+          )}
+          {(closed || s.pnl.exitQty > 0) && (
+            <div className="stat-box">
+              <div className="field-label">{closed ? '결과' : '실현'}</div>
+              <PnlText value={s.r} kind="r" className="stat-big" />
+              <PnlText value={s.pnl.exitQty ? s.pnl.realizedNet : null} kind="money" currency={currency} />
+            </div>
+          )}
         </div>
       </header>
 

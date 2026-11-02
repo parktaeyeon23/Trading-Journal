@@ -54,7 +54,17 @@ export function Histogram({ bins, title }: { bins: HistogramBin[]; title: string
           <div key={b.label} className="histo-col">
             <span className="histo-n num small">{b.count || ''}</span>
             <span className="histo-bar" style={{ height: `${(b.count / max) * 100}%` }} />
-            <span className="histo-label">{b.label}</span>
+            <span className="histo-label">
+              {/* "−1.5~−1" → two short lines so 11px fits a narrow column. */}
+              {b.label.includes('~') ? (
+                <>
+                  {b.label.split('~')[0]}
+                  <br />~{b.label.split('~')[1]}
+                </>
+              ) : (
+                b.label
+              )}
+            </span>
           </div>
         ))}
       </div>
